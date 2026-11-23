@@ -80,6 +80,13 @@ export const RULES = [
     re: /\b(?:paste|copy)\b.{0,60}\binto\s+(?:the\s+|your\s+)?(?:Terminal|PowerShell|Run dialog|command prompt)\b/i },
   { id: "remote-instructions", level: "block", cat: "net", short: "instructions loaded from the Internet", label: "Makes the agent follow instructions downloaded from the Internet",
     re: /\b(?:read|fetch|load|curl|open)\b.{0,80}https?:\/\/\S+\.md\b.{0,60}\b(?:follow|execute|obey|apply)\b|\bcurl\b.*-o\s+\S*(?:SKILL|AGENTS|CLAUDE)\.md\b/i },
+  // Crypto mining: a known miner, its protocol or its options. Uses the machine for someone else's profit.
+  { id: "crypto-miner", level: "block", cat: "exec", short: "crypto miner", label: "Runs a cryptocurrency miner on your machine",
+    re: /\b(?:xmrig|cpuminer|minerd|ethminer|lolminer|nbminer|phoenixminer|t-rex|gminer|nanominer|cgminer|bfgminer|srbminer|xmr-stak)\b|\bstratum\+(?:tcp|ssl|tls):\/\/|--donate-level\b|\bcryptonight\b|\bcoinhive\b/i },
+  // Mining described in words ("auto-miner", "starts mining", "mining pool"), but not data or text mining.
+  // Alone it needs review; with a service or cron that keeps it running, it blocks (see the skill-wide combinations).
+  { id: "mining", level: "warn", cat: null, label: "Talks about mining cryptocurrency",
+    re: /\bauto-?miner\b|\bcrypto(?:currency)?[\s-]*min(?:ing|er)\b|\bstart(?:s|ing)?\s+mining\b|(?<!\b(?:data|text|process|log|opinion|web|pattern|graph|rule|repo|code|spec)\s)\bmining\s+(?:agent|pool|rig|rewards?|script|service|bot|node)\b|\bproof\s+of\s+(?:work|compute)\b.{0,40}\bmin(?:e|ing|er)\b|\bmine\s+\$?[A-Z]{2,6}\s+tokens?\b/i },
   { id: "ransom", level: "block", cat: null, label: "Contains a ransom note (ransomware)",
     re: /\bto\s+(?:obtain|get|receive|recover)\s+(?:your|the)\s+decryption\s+key\b|\bpay(?:ment)?\s+(?:to|for)\s+(?:decrypt|the\s+decryption)|\byour\s+files\s+(?:have\s+been|are|were)\s+encrypted\b/i },
   { id: "decode-exec", level: "block", cat: "exec", short: "runs hidden code", label: "Decodes hidden text, then runs it",
@@ -143,6 +150,7 @@ const COMBO_LABEL = {
   "secret-exfil": "Reads credentials from the machine and contacts the Internet in the same place",
   "env-exfil": "Reads all environment variables and contacts the Internet in the same place",
   "token-exfil": "Reads a secret and contacts a suspicious address (raw IP or collection service)",
+  "mining-persist": "Mines cryptocurrency and installs itself to keep running (service, launch agent or cron)",
   "secret-exfil-cross": "Reads credentials from the machine, and the skill contacts a suspicious address",
 };
 
@@ -304,6 +312,10 @@ export function scan(target, { record, skill: preread } = {}) {
   const suspect = raw.find((f) => f.rule === "exfil-host" || f.rule === "raw-ip");
   if (secretFile && suspect && !raw.some((f) => f.rule === "secret-exfil" || f.rule === "token-exfil")) {
     raw.push({ ...secretFile, rule: "secret-exfil-cross", level: "block", cat: null, label: COMBO_LABEL["secret-exfil-cross"], value: undefined });
+  }
+  const mining = raw.find((f) => f.rule === "mining");
+  if (mining && raw.some((f) => ["launch-agent", "cron", "shell-rc-write"].includes(f.rule))) {
+    raw.push({ ...mining, rule: "mining-persist", level: "block", cat: null, label: COMBO_LABEL["mining-persist"], value: undefined });
   }
 
   const permissions = summarize(raw);

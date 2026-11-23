@@ -46,11 +46,13 @@ is not network access, and an attack phrase quoted between quotation marks is no
 - invisible Unicode text (tag characters, bidirectional overrides);
 - a password-protected archive to extract and run, an anonymous paste site, instructions fetched
   from the internet, a ransom note;
+- a cryptocurrency miner (a known miner such as `xmrig`, a `stratum+tcp://` pool, miner options),
+  or mining described in words together with a service, launch agent or cron that keeps it running;
 - a combination: credentials read from the machine (`~/.ssh`, `~/.aws`, keychain…) or every
   environment variable, and a network call, in the same code file or the same Markdown code block;
   or a secret and a raw IP address or collection service (webhook.site, ngrok…).
 
-**What needs review:** prompt injection and instructions that go behind the user's back (also in
+**What needs review:** mining described in words (not data or text mining), prompt injection and instructions that go behind the user's back (also in
 French and Chinese), hidden HTML comments, obfuscated code, `eval`, collection services, raw IP
 addresses, browser tokens, writes to the agent's configuration or permanent instructions, compiled
 binaries, and `curl | sh` from the skill publisher's own site or a known installer (Homebrew,
@@ -198,7 +200,7 @@ for academic research only. On the half the rules were not tuned on:
 |---|---|---|---|---|
 | Static, first version | 33 % | 42 % | 11.4 % | 14.3 % |
 | Static, current rules | 55 % | 67 % | 5.7 % | 14.3 % |
-| Static + judge (claude-opus-5-5) | 79 % | **97 %** | 5.7 % | **5.7 %** |
+| Static + judge (claude-opus-5-5) | 76 % | **97 %** | 5.7 % | **5.7 %** |
 
 The 2 safe skills still blocked are blocked by the static rules (`curl | sh` from installers),
 which the judge may not clear. On this corpus, the 3 skills the model refused to read were all

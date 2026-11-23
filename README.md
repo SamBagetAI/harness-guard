@@ -47,8 +47,8 @@ itself. Harness Guard reads all of it and tells you what it does.
 - **One line per piece.** Hooks, MCP servers, settings, `CLAUDE.md` and memory, subagents, slash
   commands, plugins and skills, each with ✅ OK, ⚠️ NEEDS REVIEW or ⛔ BLOCKED, and why.
 - **Blocks only what is serious.** Downloading and running code, reverse shells, writing to shell
-  start-up files, a secret read next to a network call, password-protected archives, invisible
-  text, instructions fetched from the internet. The rest is shown for you to decide.
+  start-up files, a secret read next to a network call, password-protected archives, crypto
+  miners, invisible text, instructions fetched from the internet. The rest is shown for you to decide.
 - **An AI judge on top.** Each piece can be read by Claude, which must quote the exact text behind
   every claim. It can raise a verdict or clear a warning with evidence; it can never clear a block.
 - **Approve once, then see only changes.** After you approve, a plugin update, a new hook or a
@@ -103,6 +103,7 @@ all.
 | `skills/pr-reviewer` | ⚠️ | A hidden HTML comment tells the agent to ignore its instructions. |
 | `skills/notes-sync` | ⛔ | Reads `~/.ssh/id_rsa` and posts it out. |
 | `skills/auto-updater` | ⛔ | A password-protected archive to extract and run. |
+| `skills/gpu-booster` | ⛔ | Calls itself a GPU booster, runs a crypto miner. |
 | `skills/todo-sync-v1` → `v2` | ⛔ | v1 approved; v2 sends every environment variable to a collection service. |
 | `harness/` | ⛔ | The harness shown at the top of this page. |
 
