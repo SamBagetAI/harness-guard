@@ -113,6 +113,60 @@ Approving is for the person, on the command line. It is not an MCP tool and no h
 known token shapes (`sk-`, `re_`, `ghp_`, `xox…`, `AKIA…`, JWTs). Every snippet in a report and
 every text sent to the judge goes through it.
 
+## Everyday use
+
+### Install
+
+```bash
+npm install -g github:SamBagetAI/harness-guard   # or: git clone, then npm install -g .
+harness-guard install                           # hooks and MCP server, for every project
+```
+
+`install` merges three hooks into `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`)
+without touching anything else, keeps the previous file next to it as
+`settings.json.before-harness-guard`, and registers the MCP server with
+`claude mcp add --scope user`. Running it again changes nothing. It refuses to edit a settings file
+that is not valid JSON. Without the `claude` CLI, it adds the hooks and prints the command that
+registers the MCP server.
+
+- `--dry-run` says what would change.
+- `--no-hooks` or `--no-mcp` leaves that part alone.
+- `harness-guard uninstall` takes out only what `install` put in.
+- The hooks call Node by its full path: after switching Node versions (nvm), run `install` again.
+
+### A new project
+
+1. `harness-guard` in the project folder. Read the summary at the top: what runs on its own, which
+   servers start, where your traffic goes, which allow rules let the agent act without asking.
+2. Fix what you do not want (a hook, an unpinned server, a secret in a rule), or accept it.
+3. `harness-guard approve`. From then on the report only shows what changed, and so does the
+   message at the start of each session.
+
+### A new skill
+
+`harness-guard ./the-skill` before you copy it into `.claude/skills` or `~/.claude/skills`. If you
+install it anyway, the PostToolUse hook checks it as Claude writes it, and the PreToolUse hook
+checks it again before Claude uses it. `harness-guard approve ./the-skill` accepts what you read,
+and its next update is compared with it.
+
+### When something changes
+
+Plugins update themselves, and a teammate can push a new hook or MCP server in the project's
+settings. At the start of the next session, Claude tells you which piece is new or changed. Run
+`harness-guard` to see why, then `harness-guard approve` once you agree.
+
+### From your agent
+
+Ask Claude "check my harness" or "is this skill safe?". It calls `check_harness` or `check_skill`
+and shows you the report. It cannot approve anything for you.
+
+### In CI
+
+```bash
+harness-guard ./skills/my-skill --json --no-judge   # exit 0 OK, 1 needs review, 2 blocked
+harness-guard audit ./skills --json --no-judge      # every skill in a folder
+```
+
 ## Hooks and MCP
 
 `harness-guard hook --print-config` prints the hooks, in exec form (no shell quoting):
@@ -156,7 +210,9 @@ harness-guard approve              # approve it
 harness-guard <folder>             # one skill
 harness-guard approve <folder>     # approve one skill
 harness-guard audit [--judge]      # every installed skill
-harness-guard hook --print-config  # the Claude Code hooks
+harness-guard install [--dry-run]  # the Claude Code hooks and the MCP server
+harness-guard uninstall            # take them out
+harness-guard hook --print-config  # the hooks, to add them by hand
 harness-guard mcp                  # the MCP server
 npm test                           # unit tests
 npm run examples                   # the examples against their expected verdicts
@@ -169,8 +225,9 @@ GitHub runs `npm test` and `npm run examples` on Node 18 and 22 on every pull re
 push to main (`.github/workflows/checks.yml`), with the judge off.
 
 `npm test` runs `tests/*.test.mjs` with Node's own test runner: no test library, no network, no
-model. The judge is tested with a fake `claude` CLI (`tests/fixtures/fake-claude.mjs`), and the
-harness with a fake home folder.
+model. The judge is tested with a fake `claude` CLI (`tests/fixtures/fake-claude.mjs`), `install` with
+another (`tests/fixtures/fake-claude-cli.mjs`) and a throwaway settings folder, and the harness with
+a fake home folder.
 
 | File | What it pins down |
 |---|---|
@@ -179,6 +236,7 @@ harness with a fake home folder.
 | `tests/judge.test.mjs` | Verified quotes, floors, clearing a warning, the cache, failures, approved versions. |
 | `tests/hooks-mcp.test.mjs` | The PostToolUse and PreToolUse hooks, the MCP server (in-process and over stdio), exit codes. |
 | `tests/harness.test.mjs` | Hooks, MCP servers, settings, plugins and commands; approval and changes; secret redaction; the SessionStart hook. |
+| `tests/install.test.mjs` | `install` and `uninstall`: merged hooks, other settings kept, a second run changing nothing, dry runs, invalid JSON, no `claude` CLI. |
 | `tests/examples.test.mjs` | Every example gives the verdict in `examples/expected.json`. |
 
 `tests/helpers.mjs` builds skills in a temporary folder, the fake judge and the fake harness. A

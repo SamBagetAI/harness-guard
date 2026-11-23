@@ -59,35 +59,31 @@ itself. Harness Guard reads all of it and tells you what it does.
 
 ## How to use it
 
+**Install it, then plug it into Claude Code** (Node 18 or later):
+
 ```bash
-git clone https://github.com/SamBagetAI/harness-guard && cd harness-guard
-npm install -g .
+npm install -g github:SamBagetAI/harness-guard
+harness-guard install
 ```
 
-1. **Check your harness.** In a project folder:
-   ```bash
-   harness-guard
-   ```
-2. **Approve it** once you have read it. From then on only what changes is reported:
-   ```bash
-   harness-guard approve
-   ```
-3. **Check a skill** before you install it:
-   ```bash
-   harness-guard ./some-skill
-   ```
-4. **Let Claude Code check for you.** `harness-guard hook --print-config` prints three hooks for
-   `~/.claude/settings.json`: at session start (warns when the harness changed or holds a blocked
-   piece), before a skill is used (refuses a blocked one), and after Claude writes a skill or a
-   config file.
-5. **Give your agent the tools.** The MCP server offers `check_harness`, `check_skill` and
-   `audit_skills`, read-only. Approving stays yours, on the command line.
-   ```bash
-   claude mcp add --transport stdio --scope user harness-guard -- node "$(pwd)/harness-guard.mjs" mcp
-   ```
+`install` adds three hooks to `~/.claude/settings.json` and registers the MCP server for all your
+projects. Run it again any time: it changes nothing when everything is in place.
+`harness-guard uninstall` takes it all out, and `--dry-run` shows what would change.
 
-Exit codes: `0` OK, `1` needs review, `2` blocked. `--json` for CI, `--no-judge` for the static
-analysis only.
+**Then, day to day:**
+
+| When | What you do | What happens |
+|---|---|---|
+| You open a project | `harness-guard` | The map of the harness: what it does without asking you, and each piece's verdict. |
+| You have read it | `harness-guard approve` | From now on, only what changes is reported. |
+| A session starts | nothing | If a piece is blocked, or a plugin, hook or server changed since you approved, Claude tells you first. |
+| You want a new skill | `harness-guard ./the-skill` | Its permissions and verdict, before you install it. |
+| Claude is about to use a skill | nothing | A blocked skill is refused; one that needs review asks you. |
+| You ask Claude | "Check my harness" | Claude calls the MCP server and shows you the report. |
+| In CI | `harness-guard ./skills/x --json --no-judge` | Exit code `0` OK, `1` needs review, `2` blocked. |
+
+The AI judge runs when the `claude` CLI is signed in, or with `ANTHROPIC_API_KEY`; `--no-judge`
+keeps to the static analysis. [docs/how-it-works.md](docs/how-it-works.md#everyday-use) has more.
 
 ## Examples
 

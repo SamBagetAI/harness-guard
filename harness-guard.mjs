@@ -9,7 +9,7 @@ import { gunzipSync, brotliDecompressSync } from "node:zlib";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { judge, applyJudgement, judgeBackend } from "./judge.mjs";
 import { scanHarness, renderHarness, approveHarness, sessionStartContext } from "./harness.mjs";
 
@@ -690,6 +690,115 @@ async function mcpServer() {
   }
 }
 
+// ── Install ───────────────────────────────────────────────────────────────
+// Adds the hooks to the user's Claude Code settings and registers the MCP server, for every project.
+// Running it again changes nothing; uninstall takes out only what install put in.
+
+const settingsFile = () => join(process.env.CLAUDE_CONFIG_DIR || join(process.env.HARNESS_GUARD_USER_HOME || homedir(), ".claude"), "settings.json");
+const isOurHook = (h) => /harness-guard\.mjs|skillcheck\.mjs/.test(JSON.stringify(h));
+
+function withoutOurHooks(hooks = {}) {
+  const out = {};
+  for (const [event, groups] of Object.entries(hooks)) {
+    const kept = (Array.isArray(groups) ? groups : []).map((g) => ({ ...g, hooks: (g.hooks ?? []).filter((h) => !isOurHook(h)) })).filter((g) => g.hooks.length);
+    if (kept.length) out[event] = kept;
+  }
+  return out;
+}
+
+function editSettings(change, { dryRun }) {
+  const file = settingsFile();
+  const text = existsSync(file) ? readFileSync(file, "utf8") : "";
+  let settings;
+  try { settings = text.trim() ? JSON.parse(text) : {}; } catch { throw new Error(`${file} is not valid JSON: fix it first, nothing was changed`); }
+  const before = JSON.stringify(settings.hooks ?? {});
+  const hooks = change(withoutOurHooks(settings.hooks));
+  if (Object.keys(hooks).length) settings.hooks = hooks; else delete settings.hooks;
+  const changed = JSON.stringify(settings.hooks ?? {}) !== before;
+  if (changed && !dryRun) {
+    mkdirSync(dirname(file), { recursive: true });
+    if (text) writeFileSync(`${file}.before-harness-guard`, text);
+    writeFileSync(file, JSON.stringify(settings, null, 2) + "\n");
+  }
+  return { file, changed };
+}
+
+export function installHooks({ dryRun = false } = {}) {
+  return editSettings((hooks) => {
+    for (const [event, groups] of Object.entries(hookConfig().hooks)) hooks[event] = [...(hooks[event] ?? []), ...groups];
+    return hooks;
+  }, { dryRun });
+}
+
+export function uninstallHooks({ dryRun = false } = {}) {
+  return editSettings((hooks) => hooks, { dryRun });
+}
+
+function claudeCli(args) {
+  const env = { ...process.env };
+  delete env.CLAUDECODE;
+  return spawnSync(process.env.HARNESS_GUARD_CLAUDE_BIN || "claude", args, { encoding: "utf8", env, input: "", timeout: 60_000 });
+}
+
+const MCP_ARGS = () => [process.execPath, realpathSync(SELF), "mcp"];
+export const mcpAddCommand = () => ["claude", "mcp", "add", "--transport", "stdio", "--scope", "user", "harness-guard", "--", ...MCP_ARGS()];
+
+export function installMcp({ dryRun = false } = {}) {
+  const get = claudeCli(["mcp", "get", "harness-guard"]);
+  if (get.error) return { status: "no-cli", command: mcpAddCommand() };
+  const registered = get.status === 0;
+  if (registered && get.stdout.includes(realpathSync(SELF))) return { status: "unchanged" };
+  if (dryRun) return { status: registered ? "would-update" : "would-add" };
+  if (registered) claudeCli(["mcp", "remove", "harness-guard", "-s", "user"]);
+  const add = claudeCli(mcpAddCommand().slice(1));
+  return add.status === 0 ? { status: registered ? "updated" : "added" } : { status: "failed", detail: (add.stderr || add.stdout).trim().slice(0, 200), command: mcpAddCommand() };
+}
+
+export function uninstallMcp({ dryRun = false } = {}) {
+  const get = claudeCli(["mcp", "get", "harness-guard"]);
+  if (get.error) return { status: "no-cli" };
+  if (get.status !== 0) return { status: "unchanged" };
+  if (dryRun) return { status: "would-remove" };
+  const rm = claudeCli(["mcp", "remove", "harness-guard", "-s", "user"]);
+  return { status: rm.status === 0 ? "removed" : "failed", detail: (rm.stderr || rm.stdout).trim().slice(0, 200) };
+}
+
+const quote = (a) => (/^[\w@%+=:,./-]+$/.test(a) ? a : `'${a.replace(/'/g, "'\\''")}'`);
+const shortPath = (p) => (p.startsWith(homedir()) ? `~${p.slice(homedir().length)}` : p);
+
+function runInstall(argv, removing) {
+  const dryRun = argv.includes("--dry-run");
+  const lines = [];
+  const would = dryRun ? "would be " : "";
+  if (!argv.includes("--no-hooks")) {
+    const r = removing ? uninstallHooks({ dryRun }) : installHooks({ dryRun });
+    const what = removing ? "removed from" : "added to";
+    lines.push(r.changed ? `✓ Hooks ${would}${what} ${shortPath(r.file)}${removing ? "" : " (SessionStart, PreToolUse on Skill, PostToolUse)"}` : `✓ Hooks already ${removing ? "absent from" : "up to date in"} ${shortPath(r.file)}`);
+    if (r.changed && !dryRun && existsSync(`${r.file}.before-harness-guard`)) lines.push(`  The previous version is in ${shortPath(r.file)}.before-harness-guard`);
+  }
+  if (!argv.includes("--no-mcp")) {
+    const r = removing ? uninstallMcp({ dryRun }) : installMcp({ dryRun });
+    const text = {
+      added: "✓ MCP server harness-guard registered for all your projects",
+      updated: "✓ MCP server harness-guard updated to this copy",
+      unchanged: removing ? "✓ MCP server harness-guard already absent" : "✓ MCP server harness-guard already registered",
+      removed: "✓ MCP server harness-guard removed",
+      "would-add": "✓ MCP server harness-guard would be registered",
+      "would-update": "✓ MCP server harness-guard would be updated to this copy",
+      "would-remove": "✓ MCP server harness-guard would be removed",
+      "no-cli": `✗ The claude CLI was not found. To ${removing ? "remove" : "add"} the MCP server, run:\n  ${removing ? "claude mcp remove harness-guard -s user" : (r.command ?? []).map(quote).join(" ")}`,
+      failed: `✗ The MCP server could not be ${removing ? "removed" : "registered"}: ${r.detail}${r.command ? `\n  Run it yourself: ${r.command.map(quote).join(" ")}` : ""}`,
+    }[r.status];
+    lines.push(text);
+  }
+  if (!removing) {
+    if (/[\\/]\.nvm[\\/]/.test(process.execPath)) lines.push(`\nNode comes from nvm (${shortPath(process.execPath)}): after you switch Node versions, run harness-guard install again.`);
+    lines.push(dryRun ? "\nDry run: nothing was changed." : "\nNew Claude Code sessions pick it up. Next, in a project folder:\n  harness-guard           what this harness does, piece by piece\n  harness-guard approve   once you have read it; after that only changes are reported");
+  } else if (dryRun) lines.push("\nDry run: nothing was changed.");
+  console.log(lines.join("\n"));
+  return lines.some((l) => l.startsWith("✗")) ? 1 : 0;
+}
+
 // ── CLI ───────────────────────────────────────────────────────────────────
 
 const HELP = `harness-guard: checks your agent's whole harness, and any skill, before you trust it
@@ -701,7 +810,9 @@ const HELP = `harness-guard: checks your agent's whole harness, and any skill, b
   harness-guard <folder|SKILL.md>         checks one skill, with the AI judge's opinion
   harness-guard approve <folder>          approves this version of a skill; later versions are compared to it
   harness-guard audit [folder…]           lists every installed skill with its verdict
-  harness-guard hook --print-config       hooks to paste into ~/.claude/settings.json
+  harness-guard install                   adds the Claude Code hooks and the MCP server, for every project
+  harness-guard uninstall                 takes them out again
+  harness-guard hook --print-config       the hooks, to add them by hand
   harness-guard mcp                       MCP server (stdio)
 
   --cwd <folder>  the project whose harness to check (default: the current folder)
@@ -709,6 +820,8 @@ const HELP = `harness-guard: checks your agent's whole harness, and any skill, b
   --no-judge      static analysis only
   --judge         (harness, audit) has the AI judge review each piece
   --full          (harness) also lists the OK pieces
+  --dry-run       (install, uninstall) says what would change, changes nothing
+  --no-hooks, --no-mcp   (install, uninstall) leaves that part alone
 AI judge: Anthropic SDK if ANTHROPIC_API_KEY is set, otherwise the claude CLI.
   HARNESS_GUARD_MODEL (default claude-opus-5-5) · HARNESS_GUARD_JUDGE=off|api|claude
 Exit codes: 0 OK · 1 needs review · 2 blocked · 64 error`;
@@ -737,6 +850,9 @@ export async function main(argv) {
   const exit = (v) => RANK[v];
 
   if (cmd === "mcp") { await mcpServer(); return 0; }
+  if (cmd === "install" || cmd === "uninstall") {
+    try { return runInstall(argv, cmd === "uninstall"); } catch (e) { console.error(`harness-guard: ${e.message}`); return 64; }
+  }
   if (cmd === "hook") {
     if (argv.includes("--print-config")) { console.log(JSON.stringify(hookConfig(), null, 2)); return 0; }
     // A hook must never break the session: on error, stay quiet.
