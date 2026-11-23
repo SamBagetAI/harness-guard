@@ -80,3 +80,23 @@ test("without the claude CLI, install still adds the hooks and prints the MCP co
   assert.match(res.stdout, /claude mcp add --transport stdio --scope user harness-guard --/);
   assert.ok(t.settings().hooks.SessionStart);
 });
+
+test("install updates the MCP server when the node binary changed (after an nvm switch)", () => {
+  const t = setup({});
+  t.run("install");
+  const store = JSON.parse(readFileSync(`${join(t.config, "..", "cli.log")}.servers.json`, "utf8"));
+  store["harness-guard"][0] = "/old/nvm/node";
+  writeFileSync(`${join(t.config, "..", "cli.log")}.servers.json`, JSON.stringify(store));
+  const res = t.run("install");
+  assert.match(res.stdout, /updated to this copy/);
+});
+
+test("the backup keeps the settings from before the first install", () => {
+  const t = setup({ model: "opus" });
+  t.run("install");
+  const s = t.settings();
+  delete s.hooks.SessionStart;
+  writeFileSync(join(t.config, "settings.json"), JSON.stringify(s));
+  t.run("install");
+  assert.deepEqual(JSON.parse(readFileSync(join(t.config, "settings.json.before-harness-guard"), "utf8")), { model: "opus" });
+});

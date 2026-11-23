@@ -10,8 +10,10 @@ import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 import { spawn, spawnSync } from "node:child_process";
+import { text as streamText } from "node:stream/consumers";
 import { judge, applyJudgement, judgeBackend } from "./judge.mjs";
-import { scanHarness, renderHarness, approveHarness, sessionStartContext } from "./harness.mjs";
+import { RANK, VERDICT_TEXT, ICON, worst, live, list, groupBy, tilde, stateDir, readJsonOrNull, frontmatterField, redactText, mapLimit } from "./common.mjs";
+import { scanHarness, renderHarness, approveHarness, sessionStartContext, activeSkillDirs } from "./harness.mjs";
 
 const SKIP_DIRS = new Set([".git", "node_modules", "__pycache__", ".venv", "venv"]);
 const MAX_BYTES = 1_000_000;
@@ -19,11 +21,8 @@ const MAX_FILES = 2000;
 const MD_EXT = new Set([".md", ".markdown", ".mdc", ".txt"]);
 const ASSET_EXT = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bmp", ".woff", ".woff2", ".ttf", ".otf", ".mp3", ".mp4", ".wav", ".pdf"]);
 
-const RANK = { ok: 0, info: 0, warn: 1, block: 2 };
-const VERDICT = ["ok", "warn", "block"];
 export const PERM_CATS = ["net", "secrets", "exec", "persist"];
 const CAT_LABEL = { net: "Network", secrets: "Secrets", exec: "Execution", persist: "Persistence" };
-const ICON = { block: "⛔", warn: "⚠️ ", info: "·" };
 
 // ── Rules ─────────────────────────────────────────────────────────────────
 // level: block = blocks on its own · warn = needs review · info = plain permission, listed in the summary.
@@ -40,25 +39,26 @@ const SECRET_ENV = /(?:process\.env\.|process\.env\[["']|os\.environ(?:\.get)?\(
 const SECRET_FILE = /(?:^|[\s"'`(=\/~])(\.(?:ssh|aws|gnupg|kube|docker)\/[\w.\/-]*)|\b(id_(?:rsa|ed25519|ecdsa))\b|(\.netrc|\.npmrc|\.pypirc|\.git-credentials)\b|(\.config\/gh\/hosts\.yml|\.claude\/\.credentials\.json|Login Data|Cookies\.binarycookies|Keychains?\/|wallet\.dat|\.solana\/id\.json)|(security\s+find-(?:generic|internet)-password)/g;
 
 // The path and the write hint must be less than 80 characters apart.
+const WRITE_ALL = new RegExp(WRITE.source, "g");
 function nearWrite(line, path) {
   const m = line.match(path);
   if (!m) return null;
-  for (const w of line.matchAll(new RegExp(WRITE.source, "g"))) if (Math.abs(w.index - m.index) < 80) return m;
+  for (const w of line.matchAll(WRITE_ALL)) if (Math.abs(w.index - m.index) < 80) return m;
   return null;
 }
 // Known installers, and the publisher's site: the skill name appears in the host or the GitHub account.
 const KNOWN_INSTALLERS = /^(sh\.rustup\.rs|get\.docker\.com|bun\.sh|deno\.land|astral\.sh|install\.python-poetry\.org|get\.pnpm\.io|fnm\.vercel\.app|raw\.githubusercontent\.com\/(homebrew|nvm-sh)\/)/i;
-let currentSkillName = "";
 // Every URL on the line must be recognised: a single unknown one is enough to block.
-function publisherInstall(line) {
+// skillName is the name of the skill being read; outside a skill (a hook, a command) it is empty.
+function publisherInstall(line, skillName = "") {
   const urls = [...line.matchAll(/\bhttps?:\/\/([^\s"'`)]+)/gi)].map((m) => m[1].toLowerCase());
-  return urls.length > 0 && urls.every(publisherUrl);
+  return urls.length > 0 && urls.every((u) => publisherUrl(u, skillName));
 }
-function publisherUrl(url) {
+function publisherUrl(url, skillName) {
   if (KNOWN_INSTALLERS.test(url) || /^brew\.sh\b/.test(url)) return true;
   const [host, owner] = url.split("/");
   const where = /^(raw\.githubusercontent\.com|github\.com|gitlab\.com)$/.test(host) ? owner ?? "" : host;
-  const tokens = currentSkillName.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 4 && !["skill", "deploy", "agent", "tool", "tools", "helper"].includes(t));
+  const tokens = skillName.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 4 && !["skill", "deploy", "agent", "tool", "tools", "helper"].includes(t));
   // The name must be a whole label of the host (cli.sentry.dev), not a substring (sentry.dev.evil.xyz would pass too: we require the registered domain).
   const labels = where.split(/[.-]/);
   const registered = host.split(".").slice(-2).join(".");
@@ -150,6 +150,7 @@ const COMBO_LABEL = {
   "secret-exfil": "Reads credentials from the machine and contacts the Internet in the same place",
   "env-exfil": "Reads all environment variables and contacts the Internet in the same place",
   "token-exfil": "Reads a secret and contacts a suspicious address (raw IP or collection service)",
+  "recon-send": "Collects details about the machine (name, user) and sends them over the Internet",
   "mining-persist": "Mines cryptocurrency and installs itself to keep running (service, launch agent or cron)",
   "secret-exfil-cross": "Reads credentials from the machine, and the skill contacts a suspicious address",
 };
@@ -173,15 +174,16 @@ function binaryKind(buf) {
   return "Binary file, not analysed";
 }
 
-// A .gz or .br file holding text is decompressed and analysed like the rest.
+// A .gz or .br file holding text is decompressed and analysed like the rest, within the same size
+// limit as any other file: { text }, { tooLarge: true }, or null when it is not compressed text.
 function unpack(rel, buf) {
   const ext = extname(rel).toLowerCase();
   if (ext !== ".gz" && ext !== ".br") return null;
-  try {
-    const out = ext === ".gz" ? gunzipSync(buf, { maxOutputLength: 20 * MAX_BYTES }) : brotliDecompressSync(buf, { maxOutputLength: 20 * MAX_BYTES });
-    if (out.subarray(0, 8000).includes(0)) return null;
-    return out.toString("utf8").replace(/^\uFEFF/, "");
-  } catch { return null; }
+  let out;
+  try { out = ext === ".gz" ? gunzipSync(buf, { maxOutputLength: MAX_BYTES }) : brotliDecompressSync(buf, { maxOutputLength: MAX_BYTES }); }
+  catch (e) { return e.code === "ERR_BUFFER_TOO_LARGE" || /too large|maxOutputLength/i.test(e.message) ? { tooLarge: true } : null; }
+  if (out.subarray(0, 8000).includes(0)) return null;
+  return { text: out.toString("utf8").replace(/^\uFEFF/, "") };
 }
 
 export function readSkill(target) {
@@ -209,7 +211,8 @@ export function readSkill(target) {
     const buf = readFileSync(e.full);
     hash.update(`${rel}\0`).update(buf).update("\0");
     const unpacked = unpack(rel, buf);
-    if (unpacked) { files.push({ rel, text: unpacked }); continue; }
+    if (unpacked?.tooLarge) { files.push({ rel, problem: `Compressed file over ${MAX_BYTES / 1_000_000} MB once decompressed, not analysed` }); continue; }
+    if (unpacked) { files.push({ rel, text: unpacked.text }); continue; }
     if (buf.subarray(0, 8000).includes(0)) {
       if (!ASSET_EXT.has(extname(rel).toLowerCase())) files.push({ rel, problem: binaryKind(buf) });
       continue;
@@ -219,8 +222,7 @@ export function readSkill(target) {
   if (entries.length >= MAX_FILES) files.push({ rel: ".", problem: `More than ${MAX_FILES} files, analysis stopped` });
 
   const skillMd = files.find((f) => f.rel === "SKILL.md" && f.text);
-  const fm = skillMd?.text.match(/^---\s*\n([\s\S]*?)\n---/);
-  const name = fm?.[1].match(/^name:\s*["']?([^"'\n]+?)["']?\s*$/m)?.[1] || basename(st.isDirectory() || basename(abs) === "SKILL.md" ? root : abs);
+  const name = (skillMd && frontmatterField(skillMd.text, "name")) || basename(st.isDirectory() || basename(abs) === "SKILL.md" ? root : abs);
   return { name, root, files, hash: hash.digest("hex") };
 }
 
@@ -229,21 +231,24 @@ export function readSkill(target) {
 function matchRule(rule, line) {
   if (rule.skip?.test(line)) return [];
   if (rule.extract) return rule.extract(line).filter(Boolean);
-  const res = Array.isArray(rule.re) ? rule.re : [rule.re];
-  if (!res.every((re) => re.test(line))) return [];
-  if (rule.unquoted) {
-    const m = line.match(res[0]);
-    if (/["'`“«‘]/.test(line[m.index - 1] ?? "")) return [];
-  }
-  return [rule.short ?? line.match(res[0])[0]];
+  const [first, ...others] = Array.isArray(rule.re) ? rule.re : [rule.re];
+  const m = first.exec(line);
+  if (!m || !others.every((re) => re.test(line))) return [];
+  if (rule.unquoted && /["'`“«‘]/.test(line[m.index - 1] ?? "")) return [];
+  return [rule.short ?? m[0]];
 }
 
-export function analyzeText(rel, text) {
+// Pushes a combination finding, at the place of the finding that triggered it.
+const combo = (out, id, at, level = "block") => out.push({ ...at, rule: id, level, cat: null, label: COMBO_LABEL[id], value: undefined });
+
+// ctx.skillName: the skill being read, so its publisher's own install script can be told apart.
+export function analyzeText(rel, text, { skillName = "" } = {}) {
   const ext = extname(rel).toLowerCase();
   const isMd = MD_EXT.has(ext);
   const out = [];
   let fence = 0, inFence = false;
   text.split(/\r?\n/).forEach((line, i) => {
+    if (!line.trim()) return;
     if (isMd && /^\s*(```|~~~)/.test(line)) { inFence = !inFence; if (inFence) fence++; return; }
     // In Markdown, prose outside code is text, not an action: a link to docs is not network access.
     const prose = isMd && !inFence && !line.includes("`") && !NET_CALL.test(line);
@@ -253,8 +258,8 @@ export function analyzeText(rel, text) {
       if (rule.code && isMd) continue;
       if (prose && rule.mdProse === false) continue;
       for (const value of matchRule(rule, line)) {
-        const soft = rule.downgrade?.(line);
-        out.push({ rule: rule.id, level: soft ? "warn" : rule.level, cat: rule.cat, label: soft ? rule.downgradeLabel : rule.label, file: rel, line: i + 1, snippet: line.trim().slice(0, 160), value, group });
+        const soft = rule.downgrade?.(line, skillName);
+        out.push({ rule: rule.id, level: soft ? "warn" : rule.level, cat: rule.cat, label: soft ? rule.downgradeLabel : rule.label, file: rel, line: i + 1, snippet: redactText(line.trim()).slice(0, 160), value, group });
       }
     }
   });
@@ -263,21 +268,18 @@ export function analyzeText(rel, text) {
     for (const m of text.matchAll(/<!--([\s\S]*?)-->/g)) {
       if (!/\b(ignore|disregard|you\s+must|assistant\s*:|system\s*:|execute|curl|wget|exfiltrat\w*|api[_ ]?key|password|secret|\.ssh)\b/i.test(m[1])) continue;
       const line = text.slice(0, m.index).split("\n").length;
-      out.push({ rule: "hidden-comment", level: "warn", cat: null, label: "Hides instructions in an invisible comment", file: rel, line, snippet: m[0].replace(/\s+/g, " ").slice(0, 160), group: `line${line}` });
+      out.push({ rule: "hidden-comment", level: "warn", cat: null, label: "Hides instructions in an invisible comment", file: rel, line, snippet: redactText(m[0].replace(/\s+/g, " ")).slice(0, 160), group: `line${line}` });
     }
   }
 
   // Dangerous combinations: a secret and a network call in the same place (same code file, or same Markdown code block).
-  const groups = new Map();
-  for (const f of out) (groups.get(f.group) ?? groups.set(f.group, []).get(f.group)).push(f);
-  for (const fs of groups.values()) {
+  for (const fs of groupBy(out, (f) => f.group).values()) {
     const has = (id) => fs.find((f) => f.rule === id);
     const net = fs.find((f) => f.cat === "net");
-    const combo = (id, at) => out.push({ ...at, rule: id, level: "block", cat: null, label: COMBO_LABEL[id], value: undefined });
-    if (has("secret-file") && net) combo("secret-exfil", has("secret-file"));
-    if (has("env-dump") && net) combo("env-exfil", has("env-dump"));
-    if (has("secret-env") && (has("exfil-host") || has("raw-ip"))) combo("token-exfil", has("secret-env"));
-    if (!isMd && has("recon") && fs.some((f) => f.rule === "net-call")) out.push({ ...has("recon"), rule: "recon-send", level: "warn", cat: null, label: "Collects details about the machine (name, user) and sends them over the Internet", value: undefined });
+    if (has("secret-file") && net) combo(out, "secret-exfil", has("secret-file"));
+    if (has("env-dump") && net) combo(out, "env-exfil", has("env-dump"));
+    if (has("secret-env") && (has("exfil-host") || has("raw-ip"))) combo(out, "token-exfil", has("secret-env"));
+    if (!isMd && has("recon") && has("net-call")) combo(out, "recon-send", has("recon"), "warn");
   }
   return out;
 }
@@ -289,33 +291,29 @@ export function summarize(raw) {
 }
 
 const keyOf = (f) => `${f.rule}|${f.file}|${f.snippet}`;
-const worst = (fs) => VERDICT[Math.max(0, ...fs.map((f) => RANK[f.level]))];
 
 // ── Approved versions ─────────────────────────────────────────────────────
 
-const storeDir = () => join(process.env.HARNESS_GUARD_HOME || join(homedir(), ".harness-guard"), "approved");
+const storeDir = () => stateDir("approved");
 const recordPath = (name) => join(storeDir(), `${name.replace(/[^\w.-]+/g, "_")}.json`);
 
-export function loadRecord(name) {
-  try { return JSON.parse(readFileSync(recordPath(name), "utf8")); } catch { return null; }
-}
+export const loadRecord = (name) => readJsonOrNull(recordPath(name));
 
 export function scan(target, { record, skill: preread } = {}) {
   const skill = preread ?? readSkill(target);
-  currentSkillName = skill.name;
   const raw = [];
   for (const f of skill.files) {
-    if (f.text != null) raw.push(...analyzeText(f.rel, f.text));
+    if (f.text != null) raw.push(...analyzeText(f.rel, f.text, { skillName: skill.name }));
     else raw.push({ rule: "unreadable", level: "warn", cat: null, label: f.problem, file: f.rel, line: 0, snippet: "" });
   }
   const secretFile = raw.find((f) => f.rule === "secret-file");
   const suspect = raw.find((f) => f.rule === "exfil-host" || f.rule === "raw-ip");
   if (secretFile && suspect && !raw.some((f) => f.rule === "secret-exfil" || f.rule === "token-exfil")) {
-    raw.push({ ...secretFile, rule: "secret-exfil-cross", level: "block", cat: null, label: COMBO_LABEL["secret-exfil-cross"], value: undefined });
+    combo(raw, "secret-exfil-cross", secretFile);
   }
   const mining = raw.find((f) => f.rule === "mining");
   if (mining && raw.some((f) => ["launch-agent", "cron", "shell-rc-write"].includes(f.rule))) {
-    raw.push({ ...mining, rule: "mining-persist", level: "block", cat: null, label: COMBO_LABEL["mining-persist"], value: undefined });
+    combo(raw, "mining-persist", mining);
   }
 
   const permissions = summarize(raw);
@@ -369,12 +367,6 @@ export function approve(target) {
 
 // ── Finding installed skills ──────────────────────────────────────────────
 
-export function defaultRoots(cwd = process.cwd()) {
-  const h = homedir();
-  const roots = [join(h, ".claude", "skills"), join(h, ".claude", "plugins"), join(cwd, ".claude", "skills"), join(h, ".codex", "skills"), join(h, ".openclaw", "skills"), join(h, ".agents", "skills")];
-  return [...new Set(roots)].filter((p) => existsSync(p));
-}
-
 export function findSkills(root, depth = 0, out = []) {
   if (depth > 7) return out;
   let entries;
@@ -396,19 +388,14 @@ const uniqueReal = (paths) => {
   return [...seen.values()];
 };
 
+// Skills to audit: the folders given, or every active skill (Claude Code and other agents).
+const auditDirs = (folders, cwd) => (folders.length ? uniqueReal(folders.flatMap((r) => findSkills(resolve(r)))) : activeSkillDirs({ cwd, otherAgents: true }).map(({ dir }) => dir));
+const byVerdict = (reports) => [...reports].sort((a, b) => RANK[b.verdict] - RANK[a.verdict] || a.name.localeCompare(b.name));
+
 // ── Display ───────────────────────────────────────────────────────────────
-
-const VERDICT_TEXT = { ok: "✅ OK", warn: "⚠️  NEEDS REVIEW", block: "⛔ BLOCKED" };
-
-function list(values, max = 6) {
-  if (!values.length) return "—";
-  return values.slice(0, max).join(", ") + (values.length > max ? `, … (+${values.length - max})` : "");
-}
 
 
 const JUDGE_TEXT = { malicious: "⛔ malicious", suspicious: "⚠️  suspicious", benign: "✅ harmless" };
-const live = (f) => !f.approved && !f.cleared;
-
 export function render(r) {
   const out = [`${VERDICT_TEXT[r.verdict]}  ${r.name}  · ${r.files} file(s) read`, `   ${r.root}`];
   if (r.diff) {
@@ -431,9 +418,7 @@ export function render(r) {
   const issues = r.findings.filter(live);
   if (issues.length) {
     out.push("", "Why");
-    const groups = new Map();
-    for (const f of issues) (groups.get(f.label) ?? groups.set(f.label, []).get(f.label)).push(f);
-    for (const [label, fs] of groups) {
+    for (const [label, fs] of groupBy(issues, (f) => f.label)) {
       out.push(`   ${ICON[fs[0].level]} ${label}`);
       for (const f of fs.filter((f) => f.file).slice(0, 3)) out.push(`        ${f.file}${f.line ? `:${f.line}` : ""}${f.snippet ? `   ${f.snippet.slice(0, 90)}` : ""}`);
       const more = fs.filter((f) => f.file).length - 3;
@@ -487,21 +472,16 @@ function skillRootFor(file) {
 }
 
 function skillName(dir) {
-  try {
-    const fm = readFileSync(join(dir, "SKILL.md"), "utf8").match(/^---\s*\n([\s\S]*?)\n---/);
-    return fm?.[1].match(/^name:\s*["']?([^"'\n]+?)["']?\s*$/m)?.[1] ?? basename(dir);
-  } catch { return basename(dir); }
+  try { return frontmatterField(readFileSync(join(dir, "SKILL.md"), "utf8"), "name") ?? basename(dir); } catch { return basename(dir); }
 }
 
+// Only the skills Claude Code can use here (user, project, enabled plugins): a disabled plugin's
+// skill with the same name must not decide for the one being used.
 export function findSkillByName(name, cwd) {
   const [plugin, short] = name.includes(":") ? name.replace(/^\//, "").split(":", 2) : [null, name.replace(/^\//, "")];
-  const dirs = uniqueReal(defaultRoots(cwd).flatMap((r) => findSkills(r)));
-  const matches = dirs.filter((d) => basename(d) === short || skillName(d) === short);
-  if (plugin) {
-    const inPlugin = matches.filter((d) => d.split("/").includes(plugin));
-    if (inPlugin.length) return inPlugin;
-  }
-  return matches;
+  const skills = activeSkillDirs({ cwd }).filter(({ dir }) => basename(dir) === short || skillName(dir) === short);
+  const inPlugin = plugin ? skills.filter(({ origin }) => origin === `plugin ${plugin}` || origin.startsWith(`plugin ${plugin}@`)) : [];
+  return (inPlugin.length ? inPlugin : skills).map(({ dir }) => dir);
 }
 
 async function preSkillUse(input) {
@@ -513,7 +493,7 @@ async function preSkillUse(input) {
   // Static analysis + the judge's cached opinion: the answer stays instant.
   // A skill not judged yet is judged in the background, for the next uses.
   const reports = await Promise.all(dirs.map((d) => check(d, { cacheOnly: true })));
-  for (const r of reports) if (!r.judge && !r.judgeError && judgeBackend()) warmJudge(r.root);
+  for (const r of reports) if (!r.judge && judgeBackend()) warmJudge(r);
   const bad = reports.filter((r) => r.verdict !== "ok");
   if (!bad.length) return null;
   const text = bad.map(render).join("\n\n────────\n\n");
@@ -529,26 +509,43 @@ async function preSkillUse(input) {
   };
 }
 
-function warmJudge(dir) {
+// Starts one background judge per skill version. The marker stops a second start while it runs,
+// and keeps a failing judge (a refusal, no sign-in) from being retried on every use for a while.
+const WARM_RETRY_MS = 6 * 60 * 60 * 1000;
+export function shouldWarm(hash, now = Date.now()) {
+  const marker = join(stateDir("judge-pending"), hash);
+  try { if (now - statSync(marker).mtimeMs < WARM_RETRY_MS) return false; } catch {}
+  mkdirSync(dirname(marker), { recursive: true });
+  writeFileSync(marker, new Date(now).toISOString());
+  return true;
+}
+
+function warmJudge(report) {
+  if (!shouldWarm(report.hash)) return;
   try {
-    const child = spawn(process.execPath, [realpathSync(SELF), dir, "--json"], { detached: true, stdio: "ignore" });
+    const child = spawn(process.execPath, [realpathSync(SELF), report.root, "--json"], { detached: true, stdio: "ignore" });
     child.unref();
   } catch {}
 }
 
+// A command that may have put a skill or plugin in place: copying, cloning, unpacking or installing,
+// with a skills or plugins folder (or a SKILL.md) named in it.
+const INSTALL_COMMAND = /\b(git\s+clone|cp|mv|rsync|ln|curl|wget|unzip|tar|npm\s+(?:i|install)|pnpm\s+(?:add|install|dlx)|npx|bunx|claude\s+plugin)\b/;
+const SKILL_PLACE = /\bskills?\b|\bplugins?\b|SKILL\.md/i;
+export const isInstallCommand = (command = "") => INSTALL_COMMAND.test(command) && SKILL_PLACE.test(command);
+
 async function postWrite(input) {
   const ti = input.tool_input ?? {};
   const file = ti.file_path ?? ti.notebook_path;
-  if (file && HARNESS_FILE.test(resolve(input.cwd ?? ".", file))) return postHarnessWrite(input, resolve(input.cwd ?? ".", file));
+  const path = file ? resolve(input.cwd ?? ".", file) : null;
+  if (path && HARNESS_FILE.test(path)) return postHarnessWrite(input, path);
   let reports = [];
-  if (file && AGENT_FILE.test(resolve(input.cwd ?? ".", file))) {
-    const p = resolve(input.cwd ?? ".", file);
-    if (existsSync(p)) reports = [await check(skillRootFor(p))];
-    reports = reports.filter((r) => r.verdict !== "ok");
-  } else if (input.tool_name === "Bash" && /\bskills?\b|\bplugins?\b|SKILL\.md/i.test(ti.command ?? "")) {
-    // After an install command: static analysis of every skill, and only blocks are reported.
-    const dirs = uniqueReal(defaultRoots(input.cwd).flatMap((r) => findSkills(r)));
-    reports = (await Promise.all(dirs.map((d) => check(d, { cacheOnly: true })))).filter((r) => r.verdict === "block");
+  if (path && AGENT_FILE.test(path)) {
+    if (existsSync(path)) reports = [await check(skillRootFor(path))].filter((r) => r.verdict !== "ok");
+  } else if (input.tool_name === "Bash" && isInstallCommand(ti.command)) {
+    // After an install command: static analysis of the active skills, and only blocks are reported.
+    const dirs = activeSkillDirs({ cwd: input.cwd }).map(({ dir }) => dir);
+    reports = (await mapLimit(dirs, 4, (d) => check(d, { cacheOnly: true }))).filter((r) => r.verdict === "block");
   }
   if (!reports.length) return null;
   const text = reports.map(render).join("\n\n────────\n\n");
@@ -560,8 +557,9 @@ async function postWrite(input) {
 
 // When Claude changes a harness config file: report the pieces from that file that have problems.
 async function postHarnessWrite(input, file) {
-  const h = await scanHarness({ cwd: input.cwd ?? process.cwd(), judge: "cache" });
-  const short = file.startsWith(homedir()) ? `~${file.slice(homedir().length)}` : file;
+  // Only the config pieces can come from the edited file: the skills are not scanned.
+  const h = await scanHarness({ cwd: input.cwd ?? process.cwd(), judge: "cache", skills: false });
+  const short = tilde(file);
   const bad = h.pieces.filter((p) => (p.source === short || p.source === file) && p.verdict !== "ok");
   if (!bad.length) return null;
   const lines = bad.map((p) => `- ${p.verdict === "block" ? "BLOCKED" : "NEEDS REVIEW"} · ${p.kind} "${p.name}": ${p.findings.filter(live).map((f) => f.label).join("; ")}`);
@@ -641,9 +639,7 @@ async function mcpCall(name, args = {}) {
     return { text: `${renderHarness(h)}\n\n${UNTRUSTED}`, data: { verdict: h.verdict, summary: h.summary, pieces: h.pieces.map((p) => ({ kind: p.kind, name: p.name, verdict: p.verdict, source: p.source })) } };
   }
   if (name === "audit_skills") {
-    const dirs = uniqueReal(defaultRoots(args.cwd).flatMap((r) => findSkills(r)));
-    const reports = await Promise.all(dirs.map((d) => check(d, { cacheOnly: true })));
-    reports.sort((a, b) => RANK[b.verdict] - RANK[a.verdict] || a.name.localeCompare(b.name));
+    const reports = byVerdict(await mapLimit(auditDirs([], args.cwd), 4, (d) => check(d, { cacheOnly: true })));
     const lines = reports.map((r) => `${VERDICT_TEXT[r.verdict]}  ${r.name}  ${r.findings.find(live)?.label ?? ""}  (${r.root})`);
     return { text: lines.join("\n") || "No skills found.", data: { skills: reports.map((r) => ({ name: r.name, root: r.root, verdict: r.verdict })) } };
   }
@@ -717,7 +713,8 @@ function editSettings(change, { dryRun }) {
   const changed = JSON.stringify(settings.hooks ?? {}) !== before;
   if (changed && !dryRun) {
     mkdirSync(dirname(file), { recursive: true });
-    if (text) writeFileSync(`${file}.before-harness-guard`, text);
+    // The backup keeps the settings as they were before harness-guard's first change.
+    if (text && !existsSync(`${file}.before-harness-guard`)) writeFileSync(`${file}.before-harness-guard`, text);
     writeFileSync(file, JSON.stringify(settings, null, 2) + "\n");
   }
   return { file, changed };
@@ -747,7 +744,8 @@ export function installMcp({ dryRun = false } = {}) {
   const get = claudeCli(["mcp", "get", "harness-guard"]);
   if (get.error) return { status: "no-cli", command: mcpAddCommand() };
   const registered = get.status === 0;
-  if (registered && get.stdout.includes(realpathSync(SELF))) return { status: "unchanged" };
+  // Up to date only when both the node binary and this copy match (after an nvm switch the node path changes).
+  if (registered && get.stdout.includes(process.execPath) && get.stdout.includes(realpathSync(SELF))) return { status: "unchanged" };
   if (dryRun) return { status: registered ? "would-update" : "would-add" };
   if (registered) claudeCli(["mcp", "remove", "harness-guard", "-s", "user"]);
   const add = claudeCli(mcpAddCommand().slice(1));
@@ -764,7 +762,7 @@ export function uninstallMcp({ dryRun = false } = {}) {
 }
 
 const quote = (a) => (/^[\w@%+=:,./-]+$/.test(a) ? a : `'${a.replace(/'/g, "'\\''")}'`);
-const shortPath = (p) => (p.startsWith(homedir()) ? `~${p.slice(homedir().length)}` : p);
+const shortPath = (p) => tilde(p, homedir());
 
 function runInstall(argv, removing) {
   const dryRun = argv.includes("--dry-run");
@@ -826,21 +824,6 @@ AI judge: Anthropic SDK if ANTHROPIC_API_KEY is set, otherwise the claude CLI.
   HARNESS_GUARD_MODEL (default claude-opus-5-5) · HARNESS_GUARD_JUDGE=off|api|claude
 Exit codes: 0 OK · 1 needs review · 2 blocked · 64 error`;
 
-async function readStdin() {
-  let s = "";
-  for await (const chunk of process.stdin) s += chunk;
-  return s;
-}
-
-async function mapLimit(items, n, fn) {
-  const out = new Array(items.length);
-  let i = 0;
-  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
-    while (i < items.length) { const k = i++; out[k] = await fn(items[k], k); }
-  }));
-  return out;
-}
-
 export async function main(argv) {
   const json = argv.includes("--json");
   const noJudge = argv.includes("--no-judge");
@@ -848,6 +831,7 @@ export async function main(argv) {
   const cwdArg = cwdAt >= 0 ? argv[cwdAt + 1] : undefined;
   const [cmd, ...rest] = argv.filter((a, i) => !a.startsWith("--") && !(cwdAt >= 0 && i === cwdAt + 1));
   const exit = (v) => RANK[v];
+  const judgeMode = noJudge ? "off" : argv.includes("--judge") ? "full" : "cache";
 
   if (cmd === "mcp") { await mcpServer(); return 0; }
   if (cmd === "install" || cmd === "uninstall") {
@@ -857,7 +841,7 @@ export async function main(argv) {
     if (argv.includes("--print-config")) { console.log(JSON.stringify(hookConfig(), null, 2)); return 0; }
     // A hook must never break the session: on error, stay quiet.
     try {
-      const res = await hookResponse(JSON.parse((await readStdin()) || "{}"));
+      const res = await hookResponse(JSON.parse((await streamText(process.stdin)) || "{}"));
       if (res) console.log(JSON.stringify(res));
     } catch (e) { console.error(`harness-guard (hook): ${e.message}`); }
     return 0;
@@ -878,20 +862,17 @@ export async function main(argv) {
     }
     if (!cmd || cmd === "harness" || cmd === "check") {
       const cwd = resolve(cwdArg ?? process.cwd());
-      if (argv.includes("--judge") && !noJudge && process.stderr.isTTY) process.stderr.write("The AI judge is reviewing each piece…\n");
-      const h = await scanHarness({ cwd, judge: noJudge ? "off" : argv.includes("--judge") ? "full" : "cache" });
+      if (judgeMode === "full" && process.stderr.isTTY) process.stderr.write("The AI judge is reviewing each piece…\n");
+      const h = await scanHarness({ cwd, judge: judgeMode });
       console.log(json ? JSON.stringify(h, null, 2) : renderHarness(h, { full: argv.includes("--full") }));
       return exit(h.verdict);
     }
     if (cmd === "audit") {
-      const roots = rest.length ? rest : defaultRoots();
-      const dirs = uniqueReal(roots.flatMap((r) => findSkills(resolve(r))));
-      const full = argv.includes("--judge") && !noJudge;
-      const reports = await mapLimit(dirs, 4, (d) => check(d, { judge: !noJudge, cacheOnly: !full }));
+      const reports = byVerdict(await mapLimit(auditDirs(rest, cwdArg), 4, (d) => check(d, { judge: judgeMode !== "off", cacheOnly: judgeMode !== "full" })));
       if (json) { console.log(JSON.stringify(reports, null, 2)); }
       else {
         if (!reports.length) console.log("No skills found.");
-        for (const r of reports.sort((a, b) => RANK[b.verdict] - RANK[a.verdict] || a.name.localeCompare(b.name))) {
+        for (const r of reports) {
           const why = r.findings.find(live);
           console.log(`${VERDICT_TEXT[r.verdict].padEnd(15)} ${r.name.padEnd(28)} ${why ? why.label : ""}\n${" ".repeat(16)}${r.root}`);
         }

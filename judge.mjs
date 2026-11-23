@@ -8,15 +8,19 @@
 
 import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, mkdtempSync } from "node:fs";
+import { mkdirSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, extname } from "node:path";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
+import { worst, live, stateDir, readJsonOrNull, redactText } from "./common.mjs";
 
 export const PROMPT_VERSION = 2;
 export const judgeModel = () => process.env.HARNESS_GUARD_MODEL || "claude-opus-5-5";
 const MAX_CHARS = 150_000;
 const CODE_FIRST = [".py", ".js", ".mjs", ".cjs", ".ts", ".sh", ".bash", ".zsh", ".ps1", ".rb", ".go"];
 const NEVER_CLEARED = new Set(["unreadable", "new-permission"]);
+// A quote that clears a warning must say something: a word like "the" or "curl" proves nothing.
+const MIN_EVIDENCE = 8;
+const MIN_CLEARING = 20;
 
 const SCHEMA = {
   type: "object",
@@ -162,28 +166,33 @@ export function judgeBackend() {
 
 // ── Cache ────────────────────────────────────────────────────────────────
 
-const cacheDir = () => join(process.env.HARNESS_GUARD_HOME || join(homedir(), ".harness-guard"), "judge-cache");
+const cacheDir = () => stateDir("judge-cache");
 const cacheKey = (hash) => createHash("sha256").update(`${hash}|${judgeModel()}|${PROMPT_VERSION}`).digest("hex");
 
-export function cachedJudgement(hash) {
-  try { return JSON.parse(readFileSync(join(cacheDir(), `${cacheKey(hash)}.json`), "utf8")); } catch { return null; }
-}
+export const cachedJudgement = (hash) => readJsonOrNull(join(cacheDir(), `${cacheKey(hash)}.json`));
 
 // ── Quote checking ───────────────────────────────────────────────────────
 
 const norm = (s) => s.replace(/\s+/g, " ").trim();
 
-export function verifyQuotes(skill, raw) {
+// Keeps only the evidence and cleared findings whose quote is really in the files.
+// A cleared finding is stored by its key, not its position, so a cached answer never lands on
+// another finding when the rules or the approvals change.
+export function verifyQuotes(skill, raw, report = { findings: [] }) {
   const texts = new Map(skill.files.filter((f) => f.text != null).map((f) => [f.rel, norm(f.text)]));
-  const ok = (file, quote) => {
+  const found = (file, quote, min) => {
     const q = norm(quote ?? "");
-    if (q.length < 4) return false;
+    if (q.length < min) return false;
     const t = texts.get(file);
-    if (t) return t.includes(q);
-    return [...texts.values()].some((x) => x.includes(q));
+    return t ? t.includes(q) : [...texts.values()].some((x) => x.includes(q));
   };
-  const evidence = (raw.evidence ?? []).filter((e) => ok(e.file, e.quote));
-  const cleared = (raw.cleared ?? []).filter((c) => ok(c.file, c.quote));
+  const evidence = (raw.evidence ?? []).filter((e) => found(e.file, e.quote, MIN_EVIDENCE));
+  const cleared = [];
+  for (const c of raw.cleared ?? []) {
+    const f = report.findings[c.finding - 1];
+    // The quote must come from the finding's own file when the finding has one.
+    if (f && found(f.file || c.file, c.quote, MIN_CLEARING)) cleared.push({ key: f.key, reason: c.reason, file: c.file, quote: c.quote });
+  }
   let verdict = raw.verdict;
   // A "malicious" verdict with no checkable evidence goes down to "suspicious".
   if (verdict === "malicious" && !evidence.length) verdict = "suspicious";
@@ -204,38 +213,34 @@ export async function judge(skill, report, { useCacheOnly = false, kind = "skill
   if (useCacheOnly) return null;
   const backend = judgeBackend();
   if (!backend) return null;
-  const { prompt, omitted } = buildPrompt(skill, report, kind);
+  // The judge sees, and quotes from, the files with secret values masked.
+  const shown = { ...skill, files: skill.files.map((f) => (f.text == null ? f : { ...f, text: redactText(f.text) })) };
+  const { prompt, omitted } = buildPrompt(shown, report, kind);
   const raw = backend === "api" ? await callApi(prompt) : await callClaudeCli(prompt);
-  const result = { ...verifyQuotes(skill, raw), omitted, model: judgeModel(), backend, at: new Date().toISOString() };
+  const result = { ...verifyQuotes(shown, raw, report), omitted, model: judgeModel(), backend, at: new Date().toISOString() };
   mkdirSync(cacheDir(), { recursive: true });
   writeFileSync(join(cacheDir(), `${cacheKey(skill.hash)}.json`), JSON.stringify(result, null, 2));
   return result;
 }
 
+const JUDGE_FINDING = { malicious: { rule: "judge-malicious", level: "block" }, suspicious: { rule: "judge-suspicious", level: "warn" } };
+
 // Merges the judge's verdict into the static report, keeping the floors.
 export function applyJudgement(report, j) {
   report.judge = j;
   if (!j) return report;
-  const live = report.findings.filter((f) => !f.approved);
-  if (!j.omitted?.length) {
-    for (const c of j.cleared) {
-      const f = report.findings[c.finding - 1];
-      if (f && f.level === "warn" && !NEVER_CLEARED.has(f.rule) && j.verdict !== "malicious") f.cleared = c.reason;
+  if (!j.omitted?.length && j.verdict !== "malicious") {
+    const byKey = new Map(report.findings.map((f) => [f.key, f]));
+    for (const c of j.cleared ?? []) {
+      const f = byKey.get(c.key);
+      if (f && f.level === "warn" && !NEVER_CLEARED.has(f.rule)) f.cleared = c.reason;
     }
   }
-  const where = (e) => ({ file: e.file, line: 0, snippet: e.quote });
-  if (j.verdict === "malicious") {
-    for (const e of j.evidence.length ? j.evidence : [{ file: "", quote: "" }]) {
-      report.findings.unshift({ rule: "judge-malicious", level: "block", cat: null, label: `AI judge: ${j.summary}`, ...where(e), key: `judge|${e.quote}` });
-    }
-  } else if (j.verdict === "suspicious") {
-    for (const e of j.evidence.length ? j.evidence : [{ file: "", quote: "" }]) {
-      report.findings.push({ rule: "judge-suspicious", level: "warn", cat: null, label: `AI judge: ${j.summary}`, ...where(e), key: `judge|${e.quote}` });
-    }
+  const kind = JUDGE_FINDING[j.verdict];
+  if (kind) {
+    const added = (j.evidence.length ? j.evidence : [{ file: "", quote: "" }]).map((e) => ({ ...kind, cat: null, label: `AI judge: ${j.summary}`, file: e.file, line: 0, snippet: e.quote, key: `judge|${e.quote}` }));
+    report.findings = kind.level === "block" ? [...added, ...report.findings] : [...report.findings, ...added];
   }
-  void live;
-  const rank = { warn: 1, block: 2 };
-  const worst = Math.max(0, ...report.findings.filter((f) => !f.approved && !f.cleared).map((f) => rank[f.level] ?? 0));
-  report.verdict = ["ok", "warn", "block"][worst];
+  report.verdict = worst(report.findings.filter(live));
   return report;
 }

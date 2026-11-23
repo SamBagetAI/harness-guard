@@ -8,12 +8,13 @@ never executes, imports or installs anything it reads, and it never shows or sen
 
 ## Where it stands
 
-The code is three files of plain JavaScript (ES modules, Node 18 or later):
+The code is four files of plain JavaScript (ES modules, Node 18 or later):
 
 | File | What it holds |
 |---|---|
 | `harness-guard.mjs` | The skill engine (reading a skill, the rules, combinations, permissions, approval and diff), the Claude Code hooks, the MCP server and the command line. |
 | `harness.mjs` | The harness: finding every piece of a Claude Code setup, the rules for hooks, MCP servers, settings and permissions, the harness approval, secret redaction, the harness report. |
+| `common.mjs` | What the three others share: verdicts, the state folder, safe JSON reading, front matter, secret redaction, a small concurrency helper. |
 | `judge.mjs` | The AI judge: the prompt, the two ways to call the model, quote checking, the cache, and how its verdict is merged with the static one. |
 
 State lives in `~/.harness-guard` (or `HARNESS_GUARD_HOME`): `approved/` for skill approvals,
@@ -29,8 +30,9 @@ Every skill and every harness piece gets one of three verdicts: ✅ OK, ⚠️ N
 ### A skill
 
 A skill is a folder with a `SKILL.md`. Every file in it is read, including scripts it calls.
-`.gz` and `.br` files holding text are decompressed and read too. A compiled binary, an archive, a
-file over 1 MB or a symbolic link cannot be read: it is reported as needing review, never ignored.
+`.gz` and `.br` files holding text are decompressed and read too, within the same 1 MB limit. A
+compiled binary, an archive, a file over 1 MB (compressed or not) or a symbolic link cannot be read:
+it is reported as needing review, never ignored.
 
 Each line is matched against the rules. Markdown prose is text, not an action: a documentation link
 is not network access, and an attack phrase quoted between quotation marks is not an attack.
@@ -95,16 +97,18 @@ Approving is for the person, on the command line. It is not an MCP tool and no h
   Anthropic SDK when `ANTHROPIC_API_KEY` is set (`npm install @anthropic-ai/sdk`), otherwise
   through the `claude` CLI, run with no tools, no settings and no MCP servers, in an empty folder.
 - **What it sees.** The files, each wrapped in a tag with a random name and marked as untrusted
-  data, the static findings and the permissions. Harness pieces are sent with secret values masked.
-- **Quotes are checked.** Every piece of evidence must quote an exact passage, which the code looks
-  for in the files. A quote that is not there is dropped; "malicious" with no quote left becomes
+  data, the static findings and the permissions, all with secret values masked.
+- **Quotes are checked.** Every piece of evidence must quote an exact passage (at least 8
+  characters), which the code looks for in the files. A quote that clears a warning needs at least
+  20 characters, from the finding's own file. A quote that is not there is dropped; "malicious" with no quote left becomes
   "suspicious".
 - **Floors.** The judge can raise a verdict, or clear a warning with an exact quote. It can never
   clear a block, an unreadable file or a new permission, and it clears nothing when some files were
   too large to show it.
 - **Refusals.** When the model's safety filters refuse to read a skill, that skill needs review.
-- **Cache.** One answer per version of a piece and per model, in `~/.harness-guard/judge-cache`. A
-  skill approved unchanged is not judged again. Before a skill is used, the hook only reads the
+- **Cache.** One answer per version of a piece and per model, in `~/.harness-guard/judge-cache`.
+  Cleared findings are stored by their key, so a cached answer never clears another finding when the
+  rules or the approvals change. A skill approved unchanged is not judged again. Before a skill is used, the hook only reads the
   cache and judges new skills in the background, so it never makes Claude wait.
 
 ### Secrets
@@ -174,8 +178,8 @@ harness-guard audit ./skills --json --no-judge      # every skill in a folder
 | Event | What it does |
 |---|---|
 | `SessionStart` | Checks the harness. Speaks only if a piece is blocked, or if something changed since the approval: Claude is told to warn you, and you see a short message. |
-| `PreToolUse` on `Skill` | Before Claude uses a skill: a blocked skill is denied, one that needs review asks you. |
-| `PostToolUse` on `Write\|Edit\|MultiEdit\|Bash` | When Claude writes a skill or a harness file (settings, `.mcp.json`, `CLAUDE.md`, subagents…), or runs a command that installs skills or plugins. |
+| `PreToolUse` on `Skill` | Before Claude uses a skill (looked up among the user's, the project's and enabled plugins' skills): a blocked skill is denied, one that needs review asks you. It uses the judge's cached opinion; a skill not judged yet is judged in the background, once per version. |
+| `PostToolUse` on `Write\|Edit\|MultiEdit\|Bash` | When Claude writes a skill or a harness file (settings, `.mcp.json`, `CLAUDE.md`, subagents…), or runs a command that copies, clones, unpacks or installs into a skills or plugins folder. |
 
 A failing hook never breaks the session: it says nothing and lets the action go ahead.
 
@@ -236,7 +240,7 @@ a fake home folder.
 | `tests/judge.test.mjs` | Verified quotes, floors, clearing a warning, the cache, failures, approved versions. |
 | `tests/hooks-mcp.test.mjs` | The PostToolUse and PreToolUse hooks, the MCP server (in-process and over stdio), exit codes. |
 | `tests/harness.test.mjs` | Hooks, MCP servers, settings, plugins and commands; approval and changes; secret redaction; the SessionStart hook. |
-| `tests/install.test.mjs` | `install` and `uninstall`: merged hooks, other settings kept, a second run changing nothing, dry runs, invalid JSON, no `claude` CLI. |
+| `tests/install.test.mjs` | `install` and `uninstall`: merged hooks, other settings kept, a second run changing nothing, dry runs, invalid JSON, no `claude` CLI, a new node path, the first backup kept. |
 | `tests/examples.test.mjs` | Every example gives the verdict in `examples/expected.json`. |
 
 `tests/helpers.mjs` builds skills in a temporary folder, the fake judge and the fake harness. A

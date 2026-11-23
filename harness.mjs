@@ -3,43 +3,18 @@
 // As for skills: read-only, nothing is run, and secret values are never shown.
 
 import { readFileSync, readdirSync, statSync, existsSync, mkdirSync, writeFileSync, realpathSync } from "node:fs";
+import { RANK, VERDICT_TEXT, ICON, worst, live, list, groupBy, userHome, tilde, stateDir, read, readJson, frontmatterField, redactText, hasSecret, mapLimit } from "./common.mjs";
 import { join, dirname, basename, resolve } from "node:path";
 import { createHash } from "node:crypto";
-import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { analyzeText, summarize, findSkills, check, judgeFailed, PERM_CATS } from "./harness-guard.mjs";
 import { judge, applyJudgement } from "./judge.mjs";
 
-const RANK = { ok: 0, info: 0, warn: 1, block: 2 };
-const VERDICTS = ["ok", "warn", "block"];
-const ICON = { ok: "✅", warn: "⚠️ ", block: "⛔" };
-const VERDICT_TEXT = { ok: "✅ OK", warn: "⚠️  NEEDS REVIEW", block: "⛔ BLOCKED" };
+export { redactText, hasSecret } from "./common.mjs";
 export const KIND_LABEL = { hook: "Hooks", mcp: "MCP servers", setting: "Settings", instructions: "Instructions and memory", agent: "Subagents", command: "Slash commands", skill: "Skills" };
 const SELF_DIR = dirname(realpathSync(fileURLToPath(import.meta.url)));
-// HARNESS_GUARD_USER_HOME lets tests use a fake home folder.
-const userHome = () => process.env.HARNESS_GUARD_USER_HOME || homedir();
 const SECRET_KEY = /(KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|AUTH|COOKIE|BEARER|PRIVATE)/i;
-
-const read = (p) => { try { return readFileSync(p, "utf8"); } catch { return null; } };
-const readJson = (p) => { const t = read(p); if (t == null) return null; try { return JSON.parse(t); } catch { return { __invalid: true }; } };
 const sha = (s) => createHash("sha256").update(s).digest("hex");
-const live = (f) => !f.approved && !f.cleared;
-const worst = (fs) => VERDICTS[Math.max(0, ...fs.map((f) => RANK[f.level] ?? 0))];
-
-function tilde(p, home = userHome()) {
-  return p && p.startsWith(home) ? `~${p.slice(home.length)}` : p;
-}
-
-// Redacts secrets slipped into a text: NAME_KEY=value, a password in a URL, recognisable tokens.
-export function redactText(t) {
-  return String(t)
-    .replace(/\b([A-Z][A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|PASS|PWD|CREDENTIALS?|AUTH)[A-Z0-9_]*)\s*=\s*("[^"]*"|'[^']*'|[^\s"'`;&|)]+)/g, "$1=<redacted>")
-    .replace(/\b([a-z][a-z0-9+.-]*:\/\/[^:\s\/@]+:)[^@\s]+@/gi, "$1<redacted>@")
-    .replace(/\b(sk-[\w-]{10,}|sk_(?:live|test)_\w{10,}|re_[A-Za-z0-9_]{10,}|ghp_\w{10,}|gho_\w{10,}|github_pat_\w{10,}|xox[abps]-[\w-]{10,}|AKIA[0-9A-Z]{12,}|AIza[\w-]{20,}|eyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,})/g, "<redacted>")
-    .replace(/(--?(?:password|passwd|token|api-key|apikey|secret)[= ])("[^"]*"|'[^']*'|\S+)/gi, "$1<redacted>")
-    .replace(/(\bBearer\s+)[\w.~+\/-]{12,}=*/g, "$1<redacted>");
-}
-export const hasSecret = (t) => redactText(t) !== String(t);
 
 // Redacts any value that looks like a secret before it is shown or sent to the judge.
 export function redact(v, key = "") {
@@ -255,16 +230,11 @@ function settingsPieces(obj, source, ctx, scope) {
 
 // ── Markdown files: instructions, subagents, commands ────────────────────
 
-function frontmatter(text) {
-  return text.match(/^---\s*\n([\s\S]*?)\n---/)?.[1] ?? "";
-}
-
 function mdPiece(kind, path, ctx, origin) {
   const text = read(path);
   if (text == null) return null;
   const raw = analyzeText(basename(path), text).map((f) => ({ ...f, file: tilde(path, ctx.home) }));
-  const fm = frontmatter(text);
-  if (kind === "agent" && /^permissionMode:\s*["']?bypassPermissions/m.test(fm)) {
+  if (kind === "agent" && frontmatterField(text, "permissionMode") === "bypassPermissions") {
     raw.push(finding("agent-bypass", "warn", "Subagent that acts without ever asking for your approval", tilde(path, ctx.home), "permissionMode: bypassPermissions"));
   }
   if (kind === "command") {
@@ -274,8 +244,8 @@ function mdPiece(kind, path, ctx, origin) {
       raw.push(finding("command-exec", "info", "", path, "", "exec", `!${m[1].slice(0, 40)}`));
     }
   }
-  const name = kind === "instructions" ? basename(path) : fm.match(/^name:\s*["']?([^"'\n]+)/m)?.[1]?.trim() ?? basename(path, ".md");
-  return makePiece(kind, name, path, raw, text, ctx, { detail: kind === "instructions" ? "" : (fm.match(/^description:\s*["']?([^"'\n]+)/m)?.[1]?.trim() ?? ""), origin, files: [{ rel: basename(path), text }] });
+  const name = kind === "instructions" ? basename(path) : frontmatterField(text, "name") ?? basename(path, ".md");
+  return makePiece(kind, name, path, raw, text, ctx, { detail: kind === "instructions" ? "" : frontmatterField(text, "description") ?? "", origin, files: [{ rel: basename(path), text }] });
 }
 
 function mdFiles(dir, recursive = false) {
@@ -373,19 +343,28 @@ export function collectHarness({ cwd = process.cwd(), home = userHome() } = {}) 
   const plugins = enabledPlugins(ctx);
   for (const p of plugins) pieces.push(...pluginPieces(p, ctx));
 
-  // Active skills: user, project, enabled plugins.
-  const skillDirs = [...findSkills(join(home, ".claude", "skills")), ...findSkills(join(ctx.cwd, ".claude", "skills")), ...plugins.flatMap((p) => findSkills(p.root).map((d) => ({ d, origin: `plugin ${p.name}` })))];
-  const skills = [];
-  for (const s of skillDirs) {
-    const d = typeof s === "string" ? s : s.d;
-    if (once(d)) skills.push({ dir: d, origin: typeof s === "string" ? (d.startsWith(join(home, ".claude")) ? "user" : "project") : s.origin });
-  }
+  const skills = activeSkillDirs({ cwd: ctx.cwd, home, plugins }).filter((s) => once(s.dir));
   return { ctx, pieces: pieces.filter(Boolean), skills, plugins };
+}
+
+// The skills Claude Code can actually use here: the user's, the project's and those of enabled
+// plugins. Marketplace copies of plugins that are not enabled, and old cached versions, are left out.
+// otherAgents adds the skill folders of other agents (Codex, OpenClaw, ~/.agents) for audits.
+export function activeSkillDirs({ cwd = process.cwd(), home = userHome(), plugins, otherAgents = false } = {}) {
+  const ctx = { cwd: resolve(cwd), home };
+  const out = [
+    ...findSkills(join(home, ".claude", "skills")).map((dir) => ({ dir, origin: "user" })),
+    ...findSkills(join(ctx.cwd, ".claude", "skills")).map((dir) => ({ dir, origin: "project" })),
+    ...(plugins ?? enabledPlugins(ctx)).flatMap((p) => findSkills(p.root).map((dir) => ({ dir, origin: `plugin ${p.name}` }))),
+  ];
+  if (otherAgents) for (const [root, origin] of [[join(home, ".codex", "skills"), "codex"], [join(home, ".openclaw", "skills"), "openclaw"], [join(home, ".agents", "skills"), "agents"]]) out.push(...findSkills(root).map((dir) => ({ dir, origin })));
+  const seen = new Set();
+  return out.filter(({ dir }) => { let real = dir; try { real = realpathSync(dir); } catch {} return !seen.has(real) && seen.add(real); });
 }
 
 // ── Harness approval ─────────────────────────────────────────────────────
 
-const storeDir = () => join(process.env.HARNESS_GUARD_HOME || join(homedir(), ".harness-guard"), "harness");
+const storeDir = () => stateDir("harness");
 const recordPath = (cwd) => join(storeDir(), `${sha(resolve(cwd)).slice(0, 16)}.json`);
 export const loadHarnessRecord = (cwd) => readJson(recordPath(cwd));
 
@@ -400,13 +379,10 @@ async function judgePiece(p, mode) {
   } catch (e) { judgeFailed(p, e); }
 }
 
-async function mapLimit(items, n, fn) {
-  let i = 0;
-  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; await fn(items[k], k); } }));
-}
-
-export async function scanHarness({ cwd = process.cwd(), home = userHome(), judge: judgeMode = "cache", record } = {}) {
-  const { ctx, pieces, skills, plugins } = collectHarness({ cwd, home });
+// skills: false skips the skills (the hook after a config edit only needs the config pieces).
+export async function scanHarness({ cwd = process.cwd(), home = userHome(), judge: judgeMode = "cache", record, skills: withSkills = true } = {}) {
+  const { ctx, pieces, skills: allSkills, plugins } = collectHarness({ cwd, home });
+  const skills = withSkills ? allSkills : [];
 
   // Skills keep their own analysis (and their own approvals).
   await mapLimit(skills, 4, async ({ dir, origin }) => {
@@ -472,7 +448,6 @@ export async function approveHarness({ cwd = process.cwd(), home = userHome() } 
 
 // ── Display ──────────────────────────────────────────────────────────────
 
-const list = (v, max = 6) => (v.length ? v.slice(0, max).join(", ") + (v.length > max ? `, … (+${v.length - max})` : "") : "—");
 
 export function renderHarness(h, { full = false } = {}) {
   const s = h.summary;
@@ -498,7 +473,7 @@ export function renderHarness(h, { full = false } = {}) {
     for (const p of shown) {
       const tag = p.isNew ? " [new]" : p.changed ? " [changed]" : "";
       const detail = p.kind === "skill" || p.kind === "instructions" ? "" : `  ${String(p.detail ?? "").slice(0, 60)}`;
-      out.push(`   ${ICON[p.verdict]} ${p.name}${tag}${detail}   · ${p.origin ?? ""} ${p.kind === "skill" ? p.source : p.source}`.replace(/\s+$/, ""));
+      out.push(`   ${ICON[p.verdict]} ${p.name}${tag}${detail}   · ${p.origin ?? ""} ${p.source}`.replace(/\s+$/, ""));
     }
     if (okCount) out.push(`   ✅ ${okCount} more OK`);
   }
@@ -510,9 +485,7 @@ export function renderHarness(h, { full = false } = {}) {
     for (const p of bad) {
       out.push(`   ${ICON[p.verdict]} ${KIND_LABEL[p.kind]} · ${p.name}`);
       if (p.judge) out.push(`        AI judge: ${p.judge.summary}`);
-      const groups = new Map();
-      for (const f of p.findings.filter(live)) (groups.get(f.label) ?? groups.set(f.label, []).get(f.label)).push(f);
-      for (const [label, fs] of groups) {
+      for (const [label, fs] of groupBy(p.findings.filter(live), (f) => f.label)) {
         const ex = fs.find((f) => f.snippet) ?? fs[0];
         out.push(`        ${ICON[fs[0].level]} ${label}${ex.snippet ? `   ${ex.snippet.slice(0, 70)}` : ""}${fs.length > 1 ? ` (×${fs.length})` : ""}`);
       }
