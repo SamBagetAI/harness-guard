@@ -1,12 +1,9 @@
 // The whole harness: hooks, MCP, settings, permissions, plugins, approval, secret redaction.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { scan, approve, check, mcpHandle, hookResponse, scanHarness, approveHarness, redact, redactText, CLI, skill, rules, withJudge, answer, fakeHarness } from "./helpers.mjs";
+import { writeFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { approve, hookResponse, scanHarness, approveHarness, redact, redactText, fakeHarness } from "./helpers.mjs";
 
 test("harness: hooks, MCP, settings, plugins and commands are analysed", async () => {
   const { home, cwd } = fakeHarness();

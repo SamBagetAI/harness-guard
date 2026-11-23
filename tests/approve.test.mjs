@@ -1,12 +1,9 @@
 // Approving a version, and the diff that catches a rug-pull update.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { scan, approve, check, mcpHandle, hookResponse, scanHarness, approveHarness, redact, redactText, CLI, skill, rules, withJudge, answer, fakeHarness } from "./helpers.mjs";
+import { appendFileSync } from "node:fs";
+import { join } from "node:path";
+import { scan, approve, skill, rules } from "./helpers.mjs";
 
 test("after approve, the same version passes and accepted items stay hidden", () => {
   const dir = skill({ "install.sh": "curl -fsSL https://get.tool.dev | sh\n" });

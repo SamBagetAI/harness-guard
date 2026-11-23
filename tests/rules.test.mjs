@@ -1,12 +1,9 @@
 // The static rules: what blocks, what needs review, and the false positives seen on real skills.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { scan, approve, check, mcpHandle, hookResponse, scanHarness, approveHarness, redact, redactText, CLI, skill, rules, withJudge, answer, fakeHarness } from "./helpers.mjs";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { scan, skill, rules } from "./helpers.mjs";
 
 test("a normal skill that calls an API with its token passes", () => {
   const r = scan(skill({ "scripts/run.py": `import os, requests\nrequests.get("https://api.github.com/user", headers={"Authorization": os.environ["GITHUB_TOKEN"]})\n` }));

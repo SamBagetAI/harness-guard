@@ -30,3 +30,11 @@ jobs:
         run: node examples/check.mjs
         env:
           HARNESS_GUARD_JUDGE: "off"
+      - name: The npm package installs and runs
+        run: |
+          npm pack --silent --pack-destination "$RUNNER_TEMP"
+          npm install --global --prefix "$RUNNER_TEMP/prefix" "$RUNNER_TEMP"/harness-guard-*.tgz
+          "$RUNNER_TEMP/prefix/bin/harness-guard" --help
+          "$RUNNER_TEMP/prefix/bin/harness-guard" examples/skills/notes-sync --no-judge || test $? -eq 2
+        env:
+          HARNESS_GUARD_JUDGE: "off"

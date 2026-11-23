@@ -8,17 +8,34 @@ never executes, imports or installs anything it reads, and it never shows or sen
 
 ## Where it stands
 
-The code is four files of plain JavaScript (ES modules, Node 18 or later):
+The code is five files of plain JavaScript (ES modules, Node 18 or later):
 
 | File | What it holds |
 |---|---|
-| `harness-guard.mjs` | The skill engine (reading a skill, the rules, combinations, permissions, approval and diff), the Claude Code hooks, the MCP server and the command line. |
+| `harness-guard.mjs` | The skill engine (reading a skill, the rules, the table of combinations, permissions, the analysis cache, approval and diff), the table of Claude Code hooks, install, the MCP server and the command line. |
+| `scan-worker.mjs` | A worker thread that fills the analysis cache for a share of the skills. |
 | `harness.mjs` | The harness: finding every piece of a Claude Code setup, the rules for hooks, MCP servers, settings and permissions, the harness approval, secret redaction, the harness report. |
 | `common.mjs` | What the three others share: verdicts, the state folder, safe JSON reading, front matter, secret redaction, a small concurrency helper. |
 | `judge.mjs` | The AI judge: the prompt, the two ways to call the model, quote checking, the cache, and how its verdict is merged with the static one. |
 
 State lives in `~/.harness-guard` (or `HARNESS_GUARD_HOME`): `approved/` for skill approvals,
-`harness/` for harness approvals, `judge-cache/` for the judge's answers. Nothing else is written.
+`harness/` for harness approvals, `judge-cache/` for the judge's answers, `scan-cache/` for the
+static analysis, `judge-pending/` for the background judge's markers. Nothing else is written.
+
+### How the engine is built
+
+- **Rules** are one list (`RULES`). Each says what it matches (`re` or `extract`), where it applies
+  (`applies(ctx)`, from a context worked out once per line: extension, Markdown, prose) and, for
+  one rule, how it softens its verdict (`adjust`: `curl | sh` from the publisher's own site).
+- **Combinations** are one table (`COMBOS`): an anchor finding, what else must be there, the scope
+  (one code file or code block, or the whole skill), the level and the label.
+- **Hooks** are one table (`HOOKS`): it gives both the settings `install` writes and the routing of
+  each event, so the two cannot drift apart.
+- **The analysis cache** keeps a skill's raw findings while its files keep the same names, sizes
+  and modification times, and while the engine's code is the same: any change to `harness-guard.mjs`
+  or `common.mjs` invalidates it. A check of an unchanged harness takes about 70 ms instead of 3 s.
+  When many skills are not cached (a first run, after an update), `warmScans` analyses them on up
+  to four worker threads.
 
 ## How it works
 
@@ -203,6 +220,7 @@ instructions.
 | `HARNESS_GUARD_JUDGE` | `off`, `api` or `claude`: turn the judge off or force how it is called. |
 | `HARNESS_GUARD_MODEL` | The judge's model (default `claude-opus-5-5`). |
 | `HARNESS_GUARD_CLAUDE_BIN` | The `claude` CLI to call (the tests point it at a fake one). |
+| `HARNESS_GUARD_WORKERS` | `0` turns off the worker threads that fill the analysis cache. |
 | `HARNESS_GUARD_USER_HOME` | The home folder to read the harness from (the tests and examples use a fake one). |
 | `ANTHROPIC_API_KEY` | When set, the judge uses the Anthropic SDK. |
 
@@ -226,7 +244,8 @@ npm run bench -- <corpus> [--judge] --out res.tsv
 ### Tests
 
 GitHub runs `npm test` and `npm run examples` on Node 18 and 22 on every pull request and every
-push to main (`.github/workflows/checks.yml`), with the judge off.
+push to main (`.github/workflows/checks.yml`), with the judge off, then installs the npm package
+and runs it, so a file missing from the package is caught.
 
 `npm test` runs `tests/*.test.mjs` with Node's own test runner: no test library, no network, no
 model. The judge is tested with a fake `claude` CLI (`tests/fixtures/fake-claude.mjs`), `install` with
@@ -241,6 +260,7 @@ a fake home folder.
 | `tests/hooks-mcp.test.mjs` | The PostToolUse and PreToolUse hooks, the MCP server (in-process and over stdio), exit codes. |
 | `tests/harness.test.mjs` | Hooks, MCP servers, settings, plugins and commands; approval and changes; secret redaction; the SessionStart hook. |
 | `tests/install.test.mjs` | `install` and `uninstall`: merged hooks, other settings kept, a second run changing nothing, dry runs, invalid JSON, no `claude` CLI, a new node path, the first backup kept. |
+| `tests/cache.test.mjs` | The analysis cache (same report, a changed or touched file analysed again) and the worker threads (same reports as one thread). |
 | `tests/examples.test.mjs` | Every example gives the verdict in `examples/expected.json`. |
 
 `tests/helpers.mjs` builds skills in a temporary folder, the fake judge and the fake harness. A
