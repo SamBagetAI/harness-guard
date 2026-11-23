@@ -565,27 +565,33 @@ async function postHarnessWrite(input, file) {
   return bad.some((p) => p.verdict === "block") ? { decision: "block", reason: text } : { hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: text } };
 }
 
-export async function hookResponse(input) {
-  if (input.hook_event_name === "SessionStart") {
-    const context = await sessionStartContext(input);
-    return context ? { systemMessage: "harness-guard: the harness has items to review (harness-guard harness).", hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: context } } : null;
-  }
-  if (input.hook_event_name === "PreToolUse" || (input.tool_name === "Skill" && !input.hook_event_name)) {
-    return input.tool_name === "Skill" ? preSkillUse(input) : null;
-  }
-  return postWrite(input);
+async function sessionStart(input) {
+  const context = await sessionStartContext(input);
+  return context ? { systemMessage: "harness-guard: the harness has items to review (run harness-guard).", hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: context } } : null;
 }
 
 const SELF = fileURLToPath(import.meta.url);
 
+// The hooks, in one table: it gives both the settings that install writes and the routing of each
+// event Claude Code sends, so the two cannot drift apart.
+const HOOKS = [
+  { event: "SessionStart", timeout: 60, handle: sessionStart },
+  { event: "PreToolUse", matcher: "Skill", handle: preSkillUse },
+  { event: "PostToolUse", matcher: "Write|Edit|MultiEdit|Bash", handle: postWrite },
+];
+
+export async function hookResponse(input) {
+  // Without an event name (older callers), a Skill call is a PreToolUse, anything else a PostToolUse.
+  const event = input.hook_event_name ?? (input.tool_name === "Skill" ? "PreToolUse" : "PostToolUse");
+  const hook = HOOKS.find((h) => h.event === event);
+  if (!hook || (hook.matcher && !new RegExp(`^(?:${hook.matcher})$`).test(input.tool_name ?? ""))) return null;
+  return hook.handle(input);
+}
+
 export function hookConfig() {
-  const hook = { type: "command", command: process.execPath, args: [realpathSync(SELF), "hook"], timeout: 200 };
+  const command = { type: "command", command: process.execPath, args: [realpathSync(SELF), "hook"] };
   return {
-    hooks: {
-      SessionStart: [{ hooks: [{ ...hook, timeout: 60 }] }],
-      PreToolUse: [{ matcher: "Skill", hooks: [hook] }],
-      PostToolUse: [{ matcher: "Write|Edit|MultiEdit|Bash", hooks: [hook] }],
-    },
+    hooks: Object.fromEntries(HOOKS.map((h) => [h.event, [{ ...(h.matcher ? { matcher: h.matcher } : {}), hooks: [{ ...command, timeout: h.timeout ?? 200 }] }]])),
   };
 }
 
