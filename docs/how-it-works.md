@@ -20,7 +20,15 @@ The code is five files of plain JavaScript (ES modules, Node 18 or later):
 
 State lives in `~/.harness-guard` (or `HARNESS_GUARD_HOME`): `approved/` for skill approvals,
 `harness/` for harness approvals, `judge-cache/` for the judge's answers, `scan-cache/` for the
-static analysis, `judge-pending/` for the background judge's markers. Nothing else is written.
+static analysis, `judge-pending/` for the background judge's markers, `last-purge` for the daily
+purge. Nothing else is written.
+
+Every cache file is touched when it is used. Once a day (at session start, or when a command
+checks the harness or audits skills), the cache drops analyses of skills that are gone or unused
+for 30 days, judge answers unused for 90 days, and markers past their six-hour wait.
+`harness-guard cache` shows what it holds, `cache purge` runs the purge now, and `cache clear`
+empties the analyses and markers (`--judge` also removes the judge's answers, which cost model
+calls to make again).
 
 ### How the engine is built
 
@@ -234,6 +242,7 @@ harness-guard approve <folder>     # approve one skill
 harness-guard audit [--judge]      # every installed skill
 harness-guard install [--dry-run]  # the Claude Code hooks and the MCP server
 harness-guard uninstall            # take them out
+harness-guard cache [purge|clear]  # the cache: show it, drop stale entries, empty it
 harness-guard hook --print-config  # the hooks, to add them by hand
 harness-guard mcp                  # the MCP server
 npm test                           # unit tests
@@ -260,7 +269,7 @@ a fake home folder.
 | `tests/hooks-mcp.test.mjs` | The PostToolUse and PreToolUse hooks, the MCP server (in-process and over stdio), exit codes. |
 | `tests/harness.test.mjs` | Hooks, MCP servers, settings, plugins and commands; approval and changes; secret redaction; the SessionStart hook. |
 | `tests/install.test.mjs` | `install` and `uninstall`: merged hooks, other settings kept, a second run changing nothing, dry runs, invalid JSON, no `claude` CLI, a new node path, the first backup kept. |
-| `tests/cache.test.mjs` | The analysis cache (same report, a changed or touched file analysed again) and the worker threads (same reports as one thread). |
+| `tests/cache.test.mjs` | The analysis cache (same report, a changed or touched file analysed again), the worker threads (same reports as one thread), and the purge: gone skills, entries unused too long, a used entry kept fresh, once a day, `cache clear` with and without `--judge`. |
 | `tests/examples.test.mjs` | Every example gives the verdict in `examples/expected.json`. |
 
 `tests/helpers.mjs` builds skills in a temporary folder, the fake judge and the fake harness. A

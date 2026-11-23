@@ -2,7 +2,7 @@
 // harness-guard: checks an AI-agent skill before you trust it.
 // Zero dependencies. Reads the files, never runs anything it reads.
 
-import { readFileSync, readdirSync, statSync, lstatSync, readlinkSync, existsSync, mkdirSync, writeFileSync, realpathSync, renameSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, lstatSync, readlinkSync, existsSync, mkdirSync, writeFileSync, realpathSync, renameSync, rmSync } from "node:fs";
 import { join, relative, resolve, dirname, basename, extname } from "node:path";
 import { createHash } from "node:crypto";
 import { gunzipSync, brotliDecompressSync } from "node:zlib";
@@ -14,7 +14,7 @@ import { Worker, isMainThread } from "node:worker_threads";
 import { availableParallelism } from "node:os";
 import { text as streamText } from "node:stream/consumers";
 import { judge, applyJudgement, judgeBackend } from "./judge.mjs";
-import { RANK, VERDICT_TEXT, ICON, worst, live, list, groupBy, tilde, stateDir, readJsonOrNull, frontmatterField, redactText, mapLimit } from "./common.mjs";
+import { RANK, VERDICT_TEXT, ICON, worst, live, list, groupBy, tilde, stateDir, readJsonOrNull, frontmatterField, redactText, mapLimit, touch } from "./common.mjs";
 import { scanHarness, renderHarness, approveHarness, sessionStartContext, activeSkillDirs } from "./harness.mjs";
 
 const SKIP_DIRS = new Set([".git", "node_modules", "__pycache__", ".venv", "venv"]);
@@ -351,7 +351,7 @@ function analysisOf(target) {
   const print = fingerprint(listing);
   const file = cacheFile(listing.root);
   const hit = readJsonOrNull(file);
-  if (hit?.print === print) return hit.analysis;
+  if (hit?.print === print) { touch(file); return hit.analysis; }
   const skill = readSkill(target);
   const analysis = analyseSkill(skill);
   try {
@@ -376,6 +376,54 @@ export async function warmScans(dirs) {
     worker.on("exit", done);
     worker.on("error", done);
   })));
+}
+
+// ── Cache housekeeping ────────────────────────────────────────────────────
+// Every cache file is touched when it is used, so its age says how long it has gone unused.
+// purgeCache removes analyses of skills that are gone or unused for 30 days, judge answers unused for
+// 90 days (they cost model calls to make again), and background-judge markers past their wait.
+// `all` empties the analysis cache and the markers; `judge` with it empties the judge answers too.
+
+const DAY = 24 * 60 * 60 * 1000;
+export const CACHE_DAYS = { scan: 30, judge: 90 };
+const CACHE_PARTS = { scan: "scan-cache", judge: "judge-cache", pending: "judge-pending" };
+
+function cacheEntries(part) {
+  const dir = stateDir(CACHE_PARTS[part]);
+  let names;
+  try { names = readdirSync(dir); } catch { return []; }
+  return names.map((name) => { const path = join(dir, name); try { return { path, name, st: statSync(path) }; } catch { return null; } }).filter(Boolean);
+}
+
+export function cacheStats() {
+  return Object.fromEntries(Object.keys(CACHE_PARTS).map((part) => {
+    const es = cacheEntries(part);
+    return [part, { entries: es.length, bytes: es.reduce((n, e) => n + e.st.size, 0) }];
+  }));
+}
+
+export function purgeCache({ all = false, judge = false, now = Date.now() } = {}) {
+  const removed = { scan: 0, judge: 0, pending: 0, bytes: 0 };
+  const drop = (e, part) => { try { rmSync(e.path, { force: true }); removed[part]++; removed.bytes += e.st.size; } catch {} };
+  const age = (e) => now - e.st.mtimeMs;
+  for (const e of cacheEntries("scan")) {
+    // A file being written right now by another process is left alone.
+    if (e.name.endsWith(".tmp")) { if (age(e) > DAY) drop(e, "scan"); continue; }
+    if (all || age(e) > CACHE_DAYS.scan * DAY) { drop(e, "scan"); continue; }
+    const root = readJsonOrNull(e.path)?.analysis?.root;
+    if (!root || !existsSync(root)) drop(e, "scan");
+  }
+  for (const e of cacheEntries("judge")) if ((all && judge) || age(e) > CACHE_DAYS.judge * DAY) drop(e, "judge");
+  for (const e of cacheEntries("pending")) if (all || age(e) > WARM_RETRY_MS) drop(e, "pending");
+  return removed;
+}
+
+// Runs purgeCache at most once a day; the session start hook and the commands call it.
+export function maybePurge(now = Date.now()) {
+  const marker = stateDir("last-purge");
+  try { if (now - statSync(marker).mtimeMs < DAY) return null; } catch {}
+  try { mkdirSync(dirname(marker), { recursive: true }); writeFileSync(marker, new Date(now).toISOString()); } catch { return null; }
+  return purgeCache({ now });
 }
 
 export function scan(target, { record, skill: preread } = {}) {
@@ -638,6 +686,7 @@ async function postHarnessWrite(input, file) {
 }
 
 async function sessionStart(input) {
+  maybePurge();
   const context = await sessionStartContext(input);
   return context ? { systemMessage: "harness-guard: the harness has items to review (run harness-guard).", hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: context } } : null;
 }
@@ -873,6 +922,30 @@ function runInstall(argv, removing) {
   return lines.some((l) => l.startsWith("✗")) ? 1 : 0;
 }
 
+// ── harness-guard cache ───────────────────────────────────────────────────
+
+const kb = (n) => (n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
+
+function runCache(sub, argv) {
+  if (!["show", "purge", "clear"].includes(sub)) { console.error(`harness-guard: unknown cache command "${sub}" (show, purge or clear)`); return 64; }
+  const lines = [];
+  if (sub !== "show") {
+    const judge = argv.includes("--judge");
+    const r = sub === "clear" ? purgeCache({ all: true, judge }) : purgeCache();
+    lines.push(`Removed ${r.scan} analysis(es), ${r.judge} judge answer(s), ${r.pending} marker(s): ${kb(r.bytes)}.`);
+    if (sub === "clear" && !judge) lines.push("The judge's answers were kept (making them again costs model calls): add --judge to remove them too.");
+    lines.push("");
+  }
+  const s = cacheStats();
+  lines.push(`Cache in ${tilde(stateDir(""), homedir())}`);
+  lines.push(`   ${"Static analysis".padEnd(20)}${String(s.scan.entries).padStart(5)} entries · ${kb(s.scan.bytes)}   (kept while used; dropped after ${CACHE_DAYS.scan} days unused or when the skill is gone)`);
+  lines.push(`   ${"AI judge answers".padEnd(20)}${String(s.judge.entries).padStart(5)} entries · ${kb(s.judge.bytes)}   (dropped after ${CACHE_DAYS.judge} days unused)`);
+  lines.push(`   ${"Judge markers".padEnd(20)}${String(s.pending.entries).padStart(5)} entries`);
+  if (sub === "show") lines.push("", "It is purged on its own once a day. harness-guard cache purge does it now; harness-guard cache clear empties it.");
+  console.log(lines.join("\n"));
+  return 0;
+}
+
 // ── CLI ───────────────────────────────────────────────────────────────────
 
 const HELP = `harness-guard: checks your agent's whole harness, and any skill, before you trust it
@@ -886,6 +959,7 @@ const HELP = `harness-guard: checks your agent's whole harness, and any skill, b
   harness-guard audit [folder…]           lists every installed skill with its verdict
   harness-guard install                   adds the Claude Code hooks and the MCP server, for every project
   harness-guard uninstall                 takes them out again
+  harness-guard cache [purge|clear]       shows the cache; purge drops stale entries; clear empties it
   harness-guard hook --print-config       the hooks, to add them by hand
   harness-guard mcp                       MCP server (stdio)
 
@@ -896,6 +970,7 @@ const HELP = `harness-guard: checks your agent's whole harness, and any skill, b
   --full          (harness) also lists the OK pieces
   --dry-run       (install, uninstall) says what would change, changes nothing
   --no-hooks, --no-mcp   (install, uninstall) leaves that part alone
+  --judge         (cache clear) also removes the AI judge's answers
 AI judge: Anthropic SDK if ANTHROPIC_API_KEY is set, otherwise the claude CLI.
   HARNESS_GUARD_MODEL (default claude-opus-5-5) · HARNESS_GUARD_JUDGE=off|api|claude
 Exit codes: 0 OK · 1 needs review · 2 blocked · 64 error`;
@@ -936,6 +1011,8 @@ export async function main(argv) {
       console.log(json ? JSON.stringify(report, null, 2) : `${render({ ...report, verdict: "ok", findings: [], diff: null })}\n\nApproved (${report.findings.length} item(s) accepted). Saved to ${path}`);
       return 0;
     }
+    if (cmd === "cache") return runCache(rest[0] ?? "show", argv);
+    if (!cmd || cmd === "harness" || cmd === "check" || cmd === "audit") maybePurge();
     if (!cmd || cmd === "harness" || cmd === "check") {
       const cwd = resolve(cwdArg ?? process.cwd());
       if (judgeMode === "full" && process.stderr.isTTY) process.stderr.write("The AI judge is reviewing each piece…\n");

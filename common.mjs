@@ -1,7 +1,7 @@
 // Helpers shared by harness-guard.mjs, harness.mjs and judge.mjs: verdicts, the state folder,
 // safe file reading, secret redaction, front matter, and a small concurrency helper.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, utimesSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -44,6 +44,8 @@ export function readJson(p) {
   if (t == null) return null;
   try { return JSON.parse(t); } catch { return { __invalid: true }; }
 }
+/** Marks a cache file as just used, so the purge keeps it. */
+export const touch = (p) => { try { const now = new Date(); utimesSync(p, now, now); } catch {} };
 /** Like readJson, but an invalid file counts as missing. */
 export const readJsonOrNull = (p) => { const v = readJson(p); return v?.__invalid ? null : v; };
 

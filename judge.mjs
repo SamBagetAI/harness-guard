@@ -11,7 +11,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, extname } from "node:path";
 import { tmpdir } from "node:os";
-import { worst, live, stateDir, readJsonOrNull, redactText } from "./common.mjs";
+import { worst, live, stateDir, readJsonOrNull, redactText, touch } from "./common.mjs";
 
 export const PROMPT_VERSION = 2;
 export const judgeModel = () => process.env.HARNESS_GUARD_MODEL || "claude-opus-5-5";
@@ -169,7 +169,12 @@ export function judgeBackend() {
 const cacheDir = () => stateDir("judge-cache");
 const cacheKey = (hash) => createHash("sha256").update(`${hash}|${judgeModel()}|${PROMPT_VERSION}`).digest("hex");
 
-export const cachedJudgement = (hash) => readJsonOrNull(join(cacheDir(), `${cacheKey(hash)}.json`));
+export function cachedJudgement(hash) {
+  const file = join(cacheDir(), `${cacheKey(hash)}.json`);
+  const hit = readJsonOrNull(file);
+  if (hit) touch(file);
+  return hit;
+}
 
 // ── Quote checking ───────────────────────────────────────────────────────
 
