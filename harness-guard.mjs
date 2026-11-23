@@ -2,7 +2,7 @@
 // harness-guard: checks an AI-agent skill before you trust it.
 // Zero dependencies. Reads the files, never runs anything it reads.
 
-import { readFileSync, readdirSync, statSync, lstatSync, readlinkSync, existsSync, mkdirSync, writeFileSync, realpathSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, lstatSync, readlinkSync, existsSync, mkdirSync, writeFileSync, realpathSync, renameSync } from "node:fs";
 import { join, relative, resolve, dirname, basename, extname } from "node:path";
 import { createHash } from "node:crypto";
 import { gunzipSync, brotliDecompressSync } from "node:zlib";
@@ -208,7 +208,8 @@ function unpack(rel, buf) {
   return { text: out.toString("utf8").replace(/^\uFEFF/, "") };
 }
 
-export function readSkill(target) {
+// The files of a skill: a folder, the folder of a SKILL.md, or one file on its own.
+function listSkill(target) {
   const abs = resolve(target);
   const st = statSync(abs);
   let root;
@@ -216,10 +217,15 @@ export function readSkill(target) {
   if (st.isDirectory()) { root = abs; walk(root, entries); }
   else if (basename(abs) === "SKILL.md") { root = dirname(abs); walk(root, entries); }
   else { root = dirname(abs); entries.push({ full: abs }); }
+  return { abs, st, root, entries: entries.sort((a, b) => a.full.localeCompare(b.full)) };
+}
+
+export function readSkill(target) {
+  const { abs, st, root, entries } = listSkill(target);
 
   const files = [];
   const hash = createHash("sha256");
-  for (const e of entries.sort((a, b) => a.full.localeCompare(b.full))) {
+  for (const e of entries) {
     const rel = relative(root, e.full) || basename(e.full);
     if (e.link) {
       let to = "?";
@@ -310,14 +316,55 @@ const recordPath = (name) => join(storeDir(), `${name.replace(/[^\w.-]+/g, "_")}
 
 export const loadRecord = (name) => readJsonOrNull(recordPath(name));
 
-export function scan(target, { record, skill: preread } = {}) {
-  const skill = preread ?? readSkill(target);
+// ── Static analysis cache ─────────────────────────────────────────────────
+// The raw findings of a skill are kept while its files keep the same names, sizes and modification
+// times, and while the engine is the same: any change to the code of harness-guard invalidates them.
+
+let engineVersion;
+const engine = () => (engineVersion ??= createHash("sha256").update(readFileSync(fileURLToPath(import.meta.url))).update(readFileSync(new URL("./common.mjs", import.meta.url))).digest("hex").slice(0, 16));
+
+function fingerprint({ root, entries }) {
+  const h = createHash("sha256").update(`${engine()}\0${root}\0${entries.length}\0`);
+  for (const e of entries) {
+    try { const st = lstatSync(e.full); h.update(`${e.full}\0${e.link ? "L" : ""}${st.size}\0${st.mtimeMs}\0`); } catch { h.update(`${e.full}\0?\0`); }
+  }
+  return h.digest("hex");
+}
+
+const cacheFile = (root) => join(stateDir("scan-cache"), `${createHash("sha256").update(root).digest("hex").slice(0, 24)}.json`);
+
+function analyseSkill(skill) {
   const raw = [];
   for (const f of skill.files) {
     if (f.text != null) raw.push(...analyzeText(f.rel, f.text, { skillName: skill.name }));
     else raw.push({ rule: "unreadable", level: "warn", cat: null, label: f.problem, file: f.rel, line: 0, snippet: "" });
   }
   applyCombos(raw, "skill", [...raw]);
+  return { name: skill.name, root: skill.root, files: skill.files.length, hash: skill.hash, raw };
+}
+
+// The analysis of a skill on disk, from the cache when nothing changed.
+function analysisOf(target) {
+  const listing = listSkill(target);
+  const print = fingerprint(listing);
+  const file = cacheFile(listing.root);
+  const hit = readJsonOrNull(file);
+  if (hit?.print === print) return hit.analysis;
+  const skill = readSkill(target);
+  const analysis = analyseSkill(skill);
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    writeFileSync(tmp, JSON.stringify({ print, analysis }));
+    renameSync(tmp, file);
+  } catch {}
+  return analysis;
+}
+
+export function scan(target, { record, skill: preread } = {}) {
+  const a = preread ? analyseSkill(preread) : analysisOf(target);
+  const skill = { name: a.name, root: a.root, hash: a.hash };
+  const raw = a.raw;
 
   const permissions = summarize(raw);
   const seen = new Set();
@@ -351,7 +398,7 @@ export function scan(target, { record, skill: preread } = {}) {
     name: skill.name,
     root: skill.root,
     target: resolve(target),
-    files: skill.files.length,
+    files: a.files,
     hash: skill.hash,
     verdict: worst(findings.filter((f) => !f.approved)),
     permissions,
@@ -436,9 +483,11 @@ export function render(r) {
 
 // Static analysis, then the AI judge. A version the human approved, unchanged, is not judged again.
 export async function check(target, { judge: useJudge = true, cacheOnly = false } = {}) {
-  const skill = readSkill(target);
-  const r = scan(target, { skill });
+  const r = scan(target);
   if (!useJudge || r.diff?.same) return r;
+  // The files are read again only if the judge has no cached answer and has to read them.
+  let files;
+  const skill = { name: r.name, root: r.root, hash: r.hash, get files() { return (files ??= readSkill(target).files); } };
   try { applyJudgement(r, await judge(skill, r, { useCacheOnly: cacheOnly })); }
   catch (e) { judgeFailed(r, e); }
   return r;
