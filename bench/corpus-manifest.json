@@ -1,0 +1,818 @@
+[
+ {
+  "id": "anthropic__mcp-builder",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/mcp-builder",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__docx",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/docx",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__web-artifacts-builder",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/web-artifacts-builder",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__claude-api",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/claude-api",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__xlsx",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/xlsx",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__pdf",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pdf",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__algorithmic-art",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/algorithmic-art",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__skill-creator",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/skill-creator",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__pptx",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pptx",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__slack-gif-creator",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/slack-gif-creator",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__webapp-testing",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/webapp-testing",
+  "why_label": "official anthropics/skills repo (includes scripts)"
+ },
+ {
+  "id": "anthropic__frontend-design",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/frontend-design",
+  "why_label": "official anthropics/skills repo"
+ },
+ {
+  "id": "anthropic__brand-guidelines",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/brand-guidelines",
+  "why_label": "official anthropics/skills repo"
+ },
+ {
+  "id": "anthropic__academy-guide",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/academy-guide",
+  "why_label": "official anthropics/skills repo"
+ },
+ {
+  "id": "anthropic__theme-factory",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/theme-factory",
+  "why_label": "official anthropics/skills repo"
+ },
+ {
+  "id": "anthropic__doc-coauthoring",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/doc-coauthoring",
+  "why_label": "official anthropics/skills repo"
+ },
+ {
+  "id": "anthropic__discernment-nudge",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/discernment-nudge",
+  "why_label": "official anthropics/skills repo"
+ },
+ {
+  "id": "anthropic__internal-comms",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/internal-comms",
+  "why_label": "official anthropics/skills repo"
+ },
+ {
+  "id": "anthropic__canvas-design",
+  "label": "benign",
+  "source_url": "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/canvas-design",
+  "why_label": "official anthropics/skills repo"
+ },
+ {
+  "id": "superpowers__systematic-debugging",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/systematic-debugging",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent) (includes scripts)"
+ },
+ {
+  "id": "superpowers__brainstorming",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/brainstorming",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent) (includes scripts)"
+ },
+ {
+  "id": "superpowers__writing-skills",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/writing-skills",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent) (includes scripts)"
+ },
+ {
+  "id": "superpowers__test-driven-development",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/test-driven-development",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__using-git-worktrees",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/using-git-worktrees",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__finishing-a-development-branch",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/finishing-a-development-branch",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__writing-plans",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/writing-plans",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__requesting-code-review",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/requesting-code-review",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__subagent-driven-development",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/subagent-driven-development",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__verification-before-completion",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/verification-before-completion",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__dispatching-parallel-agents",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/dispatching-parallel-agents",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__executing-plans",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/executing-plans",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "superpowers__receiving-code-review",
+  "label": "benign",
+  "source_url": "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7/skills/receiving-code-review",
+  "why_label": "obra/superpowers (widely used, maintained skill library by Jesse Vincent)"
+ },
+ {
+  "id": "openai__gh-fix-ci",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/gh-fix-ci",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__openai-docs",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/openai-docs",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__transcribe",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/transcribe",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__gh-address-comments",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/gh-address-comments",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__security-ownership-map",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-ownership-map",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__figma-create-design-system-rules",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-create-design-system-rules",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__figma-generate-library",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-generate-library",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__figma-use",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-use",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__playwright",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/playwright",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__speech",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/speech",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__chatgpt-apps",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/chatgpt-apps",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__vercel-deploy",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/vercel-deploy",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__figma-code-connect-components",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-code-connect-components",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__skill-creator-system",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.system/skill-creator",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__plugin-creator-system",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.system/plugin-creator",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__skill-installer-system",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.system/skill-installer",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__imagegen-system",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.system/imagegen",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__migrate-to-codex",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/migrate-to-codex",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__screenshot",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/screenshot",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__hatch-pet",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/hatch-pet",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__jupyter-notebook",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/jupyter-notebook",
+  "why_label": "official openai/skills repo (includes scripts)"
+ },
+ {
+  "id": "openai__render-deploy",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__yeet",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/yeet",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__sentry",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/sentry",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__linear",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/linear",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__cloudflare-deploy",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cloudflare-deploy",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__netlify-deploy",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/netlify-deploy",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__notion-knowledge-capture",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-knowledge-capture",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__security-best-practices",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-best-practices",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__notion-spec-to-implementation",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-spec-to-implementation",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "openai__notion-research-documentation",
+  "label": "benign",
+  "source_url": "https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-research-documentation",
+  "why_label": "official openai/skills repo"
+ },
+ {
+  "id": "vercel__vercel-optimize",
+  "label": "benign",
+  "source_url": "https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/vercel-optimize",
+  "why_label": "official vercel-labs/agent-skills repo (includes scripts)"
+ },
+ {
+  "id": "vercel__deploy-to-vercel",
+  "label": "benign",
+  "source_url": "https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/deploy-to-vercel",
+  "why_label": "official vercel-labs/agent-skills repo"
+ },
+ {
+  "id": "vercel__vercel-cli-with-tokens",
+  "label": "benign",
+  "source_url": "https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/vercel-cli-with-tokens",
+  "why_label": "official vercel-labs/agent-skills repo"
+ },
+ {
+  "id": "vercel__web-design-guidelines",
+  "label": "benign",
+  "source_url": "https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/web-design-guidelines",
+  "why_label": "official vercel-labs/agent-skills repo"
+ },
+ {
+  "id": "vercel__react-best-practices",
+  "label": "benign",
+  "source_url": "https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/react-best-practices",
+  "why_label": "official vercel-labs/agent-skills repo"
+ },
+ {
+  "id": "vercel__composition-patterns",
+  "label": "benign",
+  "source_url": "https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/composition-patterns",
+  "why_label": "official vercel-labs/agent-skills repo"
+ },
+ {
+  "id": "vercel__react-native-skills",
+  "label": "benign",
+  "source_url": "https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/react-native-skills",
+  "why_label": "official vercel-labs/agent-skills repo"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-anctro-psyclaw-openclaw-health__v0.5.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-anctro-psyclaw-openclaw-health__v0.5.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-anctro-psyclaw-openclaw-health__v0.5.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-auliollc-botroast__v1.3.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-auliollc-botroast__v1.3.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-auliollc-botroast__v1.3.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-be1human-self-evolve__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-be1human-self-evolve__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-be1human-self-evolve__v1.0.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-jacobthejacobs-trash-audit__v2.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-jacobthejacobs-trash-audit__v2.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-jacobthejacobs-trash-audit__v2.0.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-pranamya55-enumerate__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-pranamya55-enumerate__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-pranamya55-enumerate__v1.0.0"
+ },
+ {
+  "id": "msb-wild__sakaen736jih__gas-tracker",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/gas-tracker",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/sakaen736jih/gas-tracker"
+ },
+ {
+  "id": "msb-wild__noypearl__get-weather",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/get-weather",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/noypearl/get-weather"
+ },
+ {
+  "id": "msb-wild__sakaen736jih__yt-summarize",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/yt-summarize",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/sakaen736jih/yt-summarize"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-denis-sav-ordnung__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-denis-sav-ordnung__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-denis-sav-ordnung__v1.0.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-nemovideonemo-text-to-video-jailbreak__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-nemovideonemo-text-to-video-jailbreak__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-nemovideonemo-text-to-video-jailbreak__v1.0.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-kh3rwa1-autonomous-mobile-builder__v3.6.1",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-kh3rwa1-autonomous-mobile-builder__v3.6.1",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-kh3rwa1-autonomous-mobile-builder__v3.6.1"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-chenpipi0807-token-saver-pro__v1.0.1",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-chenpipi0807-token-saver-pro__v1.0.1",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-chenpipi0807-token-saver-pro__v1.0.1"
+ },
+ {
+  "id": "msb-wild__pepe276__moltbookagent",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/moltbookagent",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/pepe276/moltbookagent"
+ },
+ {
+  "id": "msb-wild__pepe276__publish-dist",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/publish-dist",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/pepe276/publish-dist"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-zkclaw-zkclaw__v1.0.1",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-zkclaw-zkclaw__v1.0.1",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-zkclaw-zkclaw__v1.0.1"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-aces1up-apify-keys__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-aces1up-apify-keys__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-aces1up-apify-keys__v1.0.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-globalcaos-teams-hack__v1.0.1",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-globalcaos-teams-hack__v1.0.1",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-globalcaos-teams-hack__v1.0.1"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-hanguang254-polymarket-arb-bot__v3.3.5",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-hanguang254-polymarket-arb-bot__v3.3.5",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-hanguang254-polymarket-arb-bot__v3.3.5"
+ },
+ {
+  "id": "msb-wild__zaycv__google-workspace",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/google-workspace",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/zaycv/google-workspace"
+ },
+ {
+  "id": "msb-wild__sakaen736jih__metamask",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/metamask",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/sakaen736jih/metamask"
+ },
+ {
+  "id": "msb-wild__zaycv__novafon",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/novafon",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/zaycv/novafon"
+ },
+ {
+  "id": "msb-wild__dexiaong__omnicogg",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/omnicogg",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/dexiaong/omnicogg"
+ },
+ {
+  "id": "msb-wild__sakaen736jih__phantom",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/phantom",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/sakaen736jih/phantom"
+ },
+ {
+  "id": "msb-wild__shay0j__security-check",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/security-check",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/shay0j/security-check"
+ },
+ {
+  "id": "msb-wild__zaycv__x-twitter-trends",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/x-twitter-trends",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/zaycv/x-twitter-trends"
+ },
+ {
+  "id": "msb-wild__noreplyboter__better-polymarket",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/better-polymarket",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/noreplyboter/better-polymarket"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-apachei-procurement-helper__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-apachei-procurement-helper__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-apachei-procurement-helper__v1.0.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-pyn3rd-operation-assistant__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-pyn3rd-operation-assistant__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-pyn3rd-operation-assistant__v1.0.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-unaveragetech-project-hiro__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-unaveragetech-project-hiro__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-unaveragetech-project-hiro__v1.0.0"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-yuan-xuan-the-origin-huan-ai-soul-thought-protocol__v3.0.9",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-yuan-xuan-the-origin-huan-ai-soul-thought-protocol__v3.0.9",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-yuan-xuan-the-origin-huan-ai-soul-thought-protocol__v3.0.9"
+ },
+ {
+  "id": "msb-wild__ArjenSchwarz__project-init--arjenschwarz-agentic-coding-claude-skills-project-init-skill-md",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/project-init--arjenschwarz-agentic-coding-claude-skills-project-init-skill-md",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/ArjenSchwarz/project-init--arjenschwarz-agentic-coding-claude-skills-project-init-skill-md"
+ },
+ {
+  "id": "msb-wild__mathHelper__math-calculator",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/math-calculator",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/mathHelper/math-calculator"
+ },
+ {
+  "id": "msb-wild__clawhub__clawhub-doctor-1017-aicash-miner__v1.0.0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/clawhub-doctor-1017-aicash-miner__v1.0.0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/clawhub/clawhub-doctor-1017-aicash-miner__v1.0.0"
+ },
+ {
+  "id": "msb-wild__hightower6eu__auto-updater-161ks",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/auto-updater-161ks",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/hightower6eu/auto-updater-161ks"
+ },
+ {
+  "id": "msb-wild__hightower6eu__insider-wallets-finder-1a7pi",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/insider-wallets-finder-1a7pi",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/hightower6eu/insider-wallets-finder-1a7pi"
+ },
+ {
+  "id": "msb-wild__sakaen736jih__agent-browser-6aigix9qi2tu",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/agent-browser-6aigix9qi2tu",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/sakaen736jih/agent-browser-6aigix9qi2tu"
+ },
+ {
+  "id": "msb-wild__sakaen736jih__deep-research-eoo5vd95",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/deep-research-eoo5vd95",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/sakaen736jih/deep-research-eoo5vd95"
+ },
+ {
+  "id": "msb-wild__zaycv__autoupdater",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/autoupdater",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/zaycv/autoupdater"
+ },
+ {
+  "id": "msb-wild__wistec__ai-it-department-wistec-core",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/ai-it-department-wistec-core",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/wistec/ai-it-department-wistec-core"
+ },
+ {
+  "id": "msb-wild__seedamir__amir",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/amir",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/seedamir/amir"
+ },
+ {
+  "id": "msb-wild__aslaep123__bybit-agent",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/bybit-agent",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/aslaep123/bybit-agent"
+ },
+ {
+  "id": "msb-wild__ttboy__deep-research1",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/deep-research1",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/ttboy/deep-research1"
+ },
+ {
+  "id": "msb-wild__moonshine-100rze__excel-1kl",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/excel-1kl",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/moonshine-100rze/excel-1kl"
+ },
+ {
+  "id": "msb-wild__davidsmorais__google",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/google",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/davidsmorais/google"
+ },
+ {
+  "id": "msb-wild__gpaitai__polymarket-bot",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/polymarket-bot",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/gpaitai/polymarket-bot"
+ },
+ {
+  "id": "msb-wild__danman60__proxy-scrap",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/proxy-scrap",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/danman60/proxy-scrap"
+ },
+ {
+  "id": "msb-wild__renixaus__yahoo-finance-lpm-1-0-0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/yahoo-finance-lpm-1-0-0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/renixaus/yahoo-finance-lpm-1-0-0"
+ },
+ {
+  "id": "msb-wild__jordanprater__youtube-video-downloader",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/youtube-video-downloader",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/jordanprater/youtube-video-downloader"
+ },
+ {
+  "id": "msb-gen__anti-reversing-techniques",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/anti-reversing-techniques",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/CI/B1/function_append_20260420_205302_b51ebd (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__agent-builder",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/agent-builder",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/CI/B2/function_inject_20260418_184130 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__analytics-events__CI_B3",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/analytics-events__CI_B3",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/CI/B3/function_append_20260421_073826_648910 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__affinity-mcp-workflows__CI_B4",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/affinity-mcp-workflows__CI_B4",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/CI/B4/function_inject_20260415_130015 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__agent-md-refactor",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/agent-md-refactor",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/CI/B6/new_script_file_20260413_235205 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__brainstorming__MIXED_B5",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/brainstorming__MIXED_B5",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/MIXED/B5/download+execute_20260426_121105_3641e2 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__caching-strategies__MIXED_B7",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/caching-strategies__MIXED_B7",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/MIXED/B7/fetch+run_20260415_211429 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__context-window-management__PI_B2",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/context-window-management__PI_B2",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/PI/B2/partial_injection_20260426_073853_9e0f96 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__adhd-daily-planner",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/adhd-daily-planner",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/PI/B10/partial_injection_20260415_061758 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-gen__axolotl__CI_B8",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/axolotl__CI_B8",
+  "why_label": "SYNTHETIC: MalSkillBench (arXiv 2606.07131) generated malicious variant, inventory source generated_malicious/CI/B8/inline_code_block_20260421_045049_eab379 (vector/behaviour code in path)"
+ },
+ {
+  "id": "msb-wild__hightower6eu__ethereum-gas-tracker-abxf0",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/ethereum-gas-tracker-abxf0",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/hightower6eu/ethereum-gas-tracker-abxf0"
+ },
+ {
+  "id": "msb-wild__hightower6eu__google-workspace-2z5dp",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/google-workspace-2z5dp",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/hightower6eu/google-workspace-2z5dp"
+ },
+ {
+  "id": "msb-wild__sakaen736jih__coding-agent-4ilvlj7rs",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/coding-agent-4ilvlj7rs",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/sakaen736jih/coding-agent-4ilvlj7rs"
+ },
+ {
+  "id": "msb-wild__openclaw__linkedin--openclaw-skills-skills-senthazalravi-zohoclaw-skill-md",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/linkedin--openclaw-skills-skills-senthazalravi-zohoclaw-skill-md",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/openclaw/linkedin--openclaw-skills-skills-senthazalravi-zohoclaw-skill-md"
+ },
+ {
+  "id": "msb-wild__aslaep123__polymarket-traiding-bot",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/polymarket-traiding-bot",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/aslaep123/polymarket-traiding-bot"
+ },
+ {
+  "id": "msb-wild__hightower6eu__polymarket-25nwy",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/polymarket-25nwy",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/hightower6eu/polymarket-25nwy"
+ },
+ {
+  "id": "msb-wild__hightower6eu__autoupdate",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/autoupdate",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/hightower6eu/autoupdate"
+ },
+ {
+  "id": "msb-wild__jordanprater__youtube-summarize",
+  "label": "malicious",
+  "source_url": "https://github.com/lxyeternal/MalSkillBench/tree/1a82bb22fab576bad14970aaa318a2339304e61a/Dataset/Skills/malware/youtube-summarize",
+  "why_label": "REAL-WORLD: MalSkillBench (arXiv 2606.07131) WILD sample, collected from public registries (ClawHub/GitHub) and manually verified malicious; inventory source wild_malware/jordanprater/youtube-summarize"
+ }
+]
