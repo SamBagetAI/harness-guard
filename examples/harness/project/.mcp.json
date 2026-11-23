@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "db": {
+      "command": "uvx",
+      "args": [
+        "example-db-mcp==0.3.1"
+      ]
+    }
+  }
+}

@@ -1,10 +1,10 @@
-// Juge IA : relit le skill et les constats de l'analyse statique, et rend un verdict argumenté.
+// AI judge: reviews the skill and the static analysis findings, and gives a reasoned verdict.
 //
-// Protections :
-// - le contenu du skill est encadré par une balise aléatoire et présenté comme donnée non fiable ;
-// - chaque preuve et chaque « levée » de constat doit citer un passage exact, vérifié ici ;
-// - le juge ne peut jamais lever un blocage statique, ni les constats « fichier illisible » ou
-//   « nouvelle permission » : il peut seulement aggraver, ou lever un avertissement avec preuve.
+// Safeguards:
+// - the skill content is wrapped in a random tag and presented as untrusted data;
+// - every piece of evidence and every "cleared" finding must quote an exact passage, checked here;
+// - the judge can never clear a static block, nor the "unreadable file" or "new permission"
+//   findings: it can only make things worse, or clear a warning with evidence.
 
 import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
@@ -12,8 +12,8 @@ import { mkdirSync, readFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, extname } from "node:path";
 import { homedir, tmpdir } from "node:os";
 
-export const PROMPT_VERSION = 1;
-export const judgeModel = () => process.env.SKILLCHECK_MODEL || "claude-opus-5-5";
+export const PROMPT_VERSION = 2;
+export const judgeModel = () => process.env.HARNESS_GUARD_MODEL || "claude-opus-5-5";
 const MAX_CHARS = 150_000;
 const CODE_FIRST = [".py", ".js", ".mjs", ".cjs", ".ts", ".sh", ".bash", ".zsh", ".ps1", ".rb", ".go"];
 const NEVER_CLEARED = new Set(["unreadable", "new-permission"]);
@@ -58,7 +58,7 @@ Verdicts:
 Rules for your answer:
 - evidence: the passages that drive your verdict. "quote" must be copied exactly, character for character, from the named file (keep it short, one line or less). Give at least one for malicious or suspicious.
 - cleared: for each numbered static finding that is clearly harmless in context, give its number, why, and an exact quote showing the harmless context. Leave out anything you are not sure about.
-- summary: one sentence in French, for a non-technical user.`;
+- summary: one sentence in English, for a non-technical user.`;
 
 function boundary() {
   return `skill-${randomBytes(6).toString("hex")}`;
@@ -80,7 +80,7 @@ export function buildPrompt(skill, report, kind = "skill") {
   const perms = Object.entries(report.permissions).map(([k, v]) => `${k}: ${v.join(", ") || "-"}`);
   const prompt = [
     `Skill name: ${skill.name}`,
-    kind !== "skill" ? `Note: this is not a skill but a ${kind} from the user's Claude Code harness (configuration). It runs automatically, without the model deciding. Judge it with the same criteria. Secret values were masked as <masqué>.` : "",
+    kind !== "skill" ? `Note: this is not a skill but a ${kind} from the user's Claude Code harness (configuration). It runs automatically, without the model deciding. Judge it with the same criteria. Secret values were redacted as <redacted>.` : "",
     "",
     "Permissions extracted by the static analysis:",
     ...perms,
@@ -95,12 +95,12 @@ export function buildPrompt(skill, report, kind = "skill") {
   return { prompt, omitted };
 }
 
-// ── Appels au modèle ──────────────────────────────────────────────────────
+// ── Model calls ───────────────────────────────────────────────────────────
 
 async function callApi(prompt) {
   let Anthropic;
   try { ({ default: Anthropic } = await import("@anthropic-ai/sdk")); }
-  catch { throw new Error("le SDK Anthropic n'est pas installé (npm install @anthropic-ai/sdk dans le dossier de skillcheck)"); }
+  catch { throw new Error("the Anthropic SDK is not installed (npm install @anthropic-ai/sdk in the harness-guard folder)"); }
   const client = new Anthropic();
   const model = judgeModel();
   const params = {
@@ -110,12 +110,12 @@ async function callApi(prompt) {
     output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } },
     messages: [{ role: "user", content: prompt }],
   };
-  // Opus 5.5 : si le filtre de sécurité refuse (contenu malveillant analysé), l'API bascule sur un autre modèle.
+  // Opus 5.5: if the safety filter refuses (malicious content under review), the API falls back to another model.
   const response = model === "claude-opus-5-5"
     ? await client.beta.messages.create({ ...params, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" })
     : await client.messages.create(params);
-  if (response.stop_reason === "refusal") throw new Error(`le modèle a refusé (${response.stop_details?.category ?? "sans catégorie"})`);
-  if (response.stop_reason === "max_tokens") throw new Error("réponse tronquée");
+  if (response.stop_reason === "refusal") throw new Error(`the model refused (${response.stop_details?.category ?? "no category"})`);
+  if (response.stop_reason === "max_tokens") throw new Error("truncated response");
   const text = response.content.filter((b) => b.type === "text").map((b) => b.text).join("");
   return JSON.parse(text);
 }
@@ -128,12 +128,12 @@ function callClaudeCli(prompt) {
   const env = { ...process.env };
   delete env.CLAUDECODE;
   delete env.CLAUDE_CODE_ENTRYPOINT;
-  // Dossier vide : aucun CLAUDE.md ni réglage de projet n'est chargé.
-  const cwd = mkdtempSync(join(tmpdir(), "skillcheck-judge-"));
+  // Empty folder: no CLAUDE.md or project settings are loaded.
+  const cwd = mkdtempSync(join(tmpdir(), "harness-guard-judge-"));
   return new Promise((resolve, reject) => {
-    const child = spawn(process.env.SKILLCHECK_CLAUDE_BIN || "claude", args, { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(process.env.HARNESS_GUARD_CLAUDE_BIN || "claude", args, { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
     let out = "", err = "";
-    const timer = setTimeout(() => { child.kill(); reject(new Error("délai dépassé (180 s)")); }, 180_000);
+    const timer = setTimeout(() => { child.kill(); reject(new Error("timed out (180 s)")); }, 180_000);
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (err += d));
     child.on("error", (e) => { clearTimeout(timer); reject(e); });
@@ -141,11 +141,11 @@ function callClaudeCli(prompt) {
       clearTimeout(timer);
       try {
         const res = JSON.parse(out);
-        if (res.is_error) return reject(new Error(String(res.result ?? "erreur du CLI claude").slice(0, 300)));
+        if (res.is_error) return reject(new Error(String(res.result ?? "claude CLI error").slice(0, 300)));
         const data = res.structured_output ?? JSON.parse(res.result);
         resolve(data);
       } catch {
-        reject(new Error(`réponse illisible du CLI claude (code ${code}) ${err.slice(0, 200)}`));
+        reject(new Error(`unreadable response from the claude CLI (code ${code}) ${err.slice(0, 200)}`));
       }
     });
     child.stdin.end(prompt);
@@ -153,7 +153,7 @@ function callClaudeCli(prompt) {
 }
 
 export function judgeBackend() {
-  const want = process.env.SKILLCHECK_JUDGE;
+  const want = process.env.HARNESS_GUARD_JUDGE;
   if (want === "off") return null;
   if (want === "api" || want === "claude") return want;
   if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) return "api";
@@ -162,14 +162,14 @@ export function judgeBackend() {
 
 // ── Cache ────────────────────────────────────────────────────────────────
 
-const cacheDir = () => join(process.env.SKILLCHECK_HOME || join(homedir(), ".skillcheck"), "judge-cache");
+const cacheDir = () => join(process.env.HARNESS_GUARD_HOME || join(homedir(), ".harness-guard"), "judge-cache");
 const cacheKey = (hash) => createHash("sha256").update(`${hash}|${judgeModel()}|${PROMPT_VERSION}`).digest("hex");
 
 export function cachedJudgement(hash) {
   try { return JSON.parse(readFileSync(join(cacheDir(), `${cacheKey(hash)}.json`), "utf8")); } catch { return null; }
 }
 
-// ── Vérification des citations ───────────────────────────────────────────
+// ── Quote checking ───────────────────────────────────────────────────────
 
 const norm = (s) => s.replace(/\s+/g, " ").trim();
 
@@ -185,7 +185,7 @@ export function verifyQuotes(skill, raw) {
   const evidence = (raw.evidence ?? []).filter((e) => ok(e.file, e.quote));
   const cleared = (raw.cleared ?? []).filter((c) => ok(c.file, c.quote));
   let verdict = raw.verdict;
-  // Un verdict « malveillant » sans aucune preuve vérifiable redescend à « suspect ».
+  // A "malicious" verdict with no checkable evidence goes down to "suspicious".
   if (verdict === "malicious" && !evidence.length) verdict = "suspicious";
   return {
     verdict,
@@ -196,7 +196,7 @@ export function verifyQuotes(skill, raw) {
   };
 }
 
-// ── Point d'entrée ───────────────────────────────────────────────────────
+// ── Entry point ──────────────────────────────────────────────────────────
 
 export async function judge(skill, report, { useCacheOnly = false, kind = "skill" } = {}) {
   const hit = cachedJudgement(skill.hash);
@@ -212,7 +212,7 @@ export async function judge(skill, report, { useCacheOnly = false, kind = "skill
   return result;
 }
 
-// Fusionne le verdict du juge avec le rapport statique, en respectant les planchers.
+// Merges the judge's verdict into the static report, keeping the floors.
 export function applyJudgement(report, j) {
   report.judge = j;
   if (!j) return report;
@@ -226,11 +226,11 @@ export function applyJudgement(report, j) {
   const where = (e) => ({ file: e.file, line: 0, snippet: e.quote });
   if (j.verdict === "malicious") {
     for (const e of j.evidence.length ? j.evidence : [{ file: "", quote: "" }]) {
-      report.findings.unshift({ rule: "judge-malicious", level: "block", cat: null, label: `Juge IA : ${j.summary}`, ...where(e), key: `judge|${e.quote}` });
+      report.findings.unshift({ rule: "judge-malicious", level: "block", cat: null, label: `AI judge: ${j.summary}`, ...where(e), key: `judge|${e.quote}` });
     }
   } else if (j.verdict === "suspicious") {
     for (const e of j.evidence.length ? j.evidence : [{ file: "", quote: "" }]) {
-      report.findings.push({ rule: "judge-suspicious", level: "warn", cat: null, label: `Juge IA : ${j.summary}`, ...where(e), key: `judge|${e.quote}` });
+      report.findings.push({ rule: "judge-suspicious", level: "warn", cat: null, label: `AI judge: ${j.summary}`, ...where(e), key: `judge|${e.quote}` });
     }
   }
   void live;

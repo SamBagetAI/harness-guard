@@ -1,11 +1,28 @@
 {
-  "name": "skillcheck",
+  "name": "harness-guard",
   "version": "0.1.0",
-  "description": "Vérifie un skill d'agent IA avant de lui faire confiance. Zéro dépendance.",
+  "description": "Checks an AI agent skill, or your whole Claude Code harness, before you trust it. No dependencies.",
   "type": "module",
-  "bin": { "skillcheck": "./skillcheck.mjs" },
-  "files": ["skillcheck.mjs", "judge.mjs"],
-  "scripts": { "test": "node --test test/*.test.mjs" },
-  "engines": { "node": ">=18" },
-  "license": "MIT"
+  "bin": {
+    "harness-guard": "./harness-guard.mjs"
+  },
+  "files": [
+    "harness-guard.mjs",
+    "judge.mjs",
+    "harness.mjs"
+  ],
+  "scripts": {
+    "test": "node --test --test-reporter=spec tests/*.test.mjs",
+    "examples": "node examples/check.mjs",
+    "bench": "node bench/run.mjs",
+    "graph": "graphify update ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SamBagetAI/harness-guard"
+  }
 }

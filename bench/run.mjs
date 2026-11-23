@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-// Mesure skillcheck sur un corpus étiqueté.
-// Usage : node bench/run.mjs <corpus> [--judge] [--out fichier.tsv]
-// Le corpus contient manifest.json ([{id, label: "benign"|"malicious"}]) et <label>/<id>/.
+// Measures harness-guard on a labelled corpus.
+// Usage: node bench/run.mjs <corpus> [--judge] [--out file.tsv]
+// The corpus holds manifest.json ([{id, label: "benign"|"malicious"}]) and <label>/<id>/.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { check } from "../skillcheck.mjs";
+import { check } from "../harness-guard.mjs";
 
 const args = process.argv.slice(2);
 const corpus = resolve(args.find((a) => !a.startsWith("--")) ?? ".");
 const useJudge = args.includes("--judge");
 const out = args.includes("--out") ? args[args.indexOf("--out") + 1] : null;
-if (!useJudge) process.env.SKILLCHECK_JUDGE = "off";
+if (!useJudge) process.env.HARNESS_GUARD_JUDGE = "off";
 
 const manifest = JSON.parse(readFileSync(join(corpus, "manifest.json"), "utf8"));
 const rows = new Array(manifest.length);
@@ -37,23 +37,23 @@ function metrics(positive) {
   return { tp, fn, fp, tn, recall, precision, fpr, f1 };
 }
 const pct = (x) => `${(100 * x).toFixed(1)} %`;
-const show = (name, m) => console.log(`${name.padEnd(34)} attrapés ${m.tp}/${m.tp + m.fn} (${pct(m.recall)})   faux positifs ${m.fp}/${m.fp + m.tn} (${pct(m.fpr)})   précision ${pct(m.precision)}   F1 ${m.f1.toFixed(3)}`);
+const show = (name, m) => console.log(`${name.padEnd(34)} caught ${m.tp}/${m.tp + m.fn} (${pct(m.recall)})   false positives ${m.fp}/${m.fp + m.tn} (${pct(m.fpr)})   precision ${pct(m.precision)}   F1 ${m.f1.toFixed(3)}`);
 
 const n = (l) => rows.filter((r) => r.label === l).length;
-console.log(`Corpus : ${n("malicious")} malveillants, ${n("benign")} sains · ${useJudge ? "statique + juge IA" : "statique seul"}\n`);
-show("Bloqué (⛔)", metrics((r) => r.verdict === "block"));
-show("Bloqué ou à vérifier (⛔ + ⚠️)", metrics((r) => r.verdict !== "ok"));
+console.log(`Corpus: ${n("malicious")} malicious, ${n("benign")} benign · ${useJudge ? "static + AI judge" : "static only"}\n`);
+show("Blocked (⛔)", metrics((r) => r.verdict === "block"));
+show("Blocked or needs review (⛔ + ⚠️)", metrics((r) => r.verdict !== "ok"));
 const errors = rows.filter((r) => r.judge === "error").length;
-if (useJudge) console.log(`\nJuge : ${errors} erreur(s) sur ${rows.length}`);
+if (useJudge) console.log(`\nJudge: ${errors} error(s) out of ${rows.length}`);
 
-console.log("\nMalveillants passés en ✅ :");
+console.log("\nMalicious that got ✅:");
 for (const r of rows.filter((r) => r.label === "malicious" && r.verdict === "ok")) console.log(`   ${r.id}`);
-console.log("\nSains bloqués ⛔ :");
+console.log("\nBenign blocked ⛔:");
 for (const r of rows.filter((r) => r.label === "benign" && r.verdict === "block")) console.log(`   ${r.id}   ${r.reason}`);
-console.log("\nSains en ⚠️ :");
+console.log("\nBenign in ⚠️:");
 for (const r of rows.filter((r) => r.label === "benign" && r.verdict === "warn")) console.log(`   ${r.id}   ${r.reason}`);
 
 if (out) {
   writeFileSync(out, ["id\tlabel\tverdict\tjudge\treason\tjudge_error", ...rows.map((r) => [r.id, r.label, r.verdict, r.judge, r.reason, r.judgeError].join("\t"))].join("\n") + "\n");
-  console.error(`Résultats : ${out}`);
+  console.error(`Results: ${out}`);
 }

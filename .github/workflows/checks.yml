@@ -1,0 +1,32 @@
+name: Checks
+
+# The checks that need no network and no model, on every pull request and every push to main.
+# The benchmark needs a labelled corpus and, with the judge, model calls: run it locally.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        node: [18, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+        env:
+          HARNESS_GUARD_JUDGE: "off"
+      - name: Examples give their expected verdicts
+        run: node examples/check.mjs
+        env:
+          HARNESS_GUARD_JUDGE: "off"

@@ -1,0 +1,31 @@
+{
+  "skills": {
+    "weather-forecast": { "verdict": "ok", "why": "Calls a public weather API; nothing else." },
+    "github-issues": { "verdict": "ok", "why": "Uses its own GITHUB_TOKEN with api.github.com: normal for its purpose." },
+    "acme-cli": { "verdict": "warn", "why": "curl | sh, but from the publisher's own site (get.acme.example), so it asks instead of blocking." },
+    "pr-reviewer": { "verdict": "warn", "why": "A hidden HTML comment tells the agent to ignore its instructions. Prose only: the AI judge is the one that can block it." },
+    "notes-sync": { "verdict": "block", "why": "Reads ~/.ssh/id_rsa and posts it to the internet in the same script." },
+    "auto-updater": { "verdict": "block", "why": "Classic malware lure: a password-protected archive to extract and run." }
+  },
+  "rugPull": {
+    "approve": "todo-sync-v1",
+    "update": "todo-sync-v2",
+    "verdict": "block",
+    "newNetwork": ["webhook.site"],
+    "why": "Version 1 is approved; version 2 adds a dump of every environment variable sent to a collection service."
+  },
+  "harness": {
+    "home": "harness/home",
+    "project": "harness/project",
+    "verdict": "block",
+    "pieces": {
+      "command:deploy": "block",
+      "mcp:files": "warn",
+      "mcp:notes": "ok",
+      "mcp:docs": "ok",
+      "mcp:db": "ok",
+      "hook:UserPromptSubmit *": "warn"
+    },
+    "why": "A slash command runs curl | sh on its own; an MCP server starts an unpinned package; a hook sends every prompt out; settings send all Claude traffic through a gateway, allow Bash(curl:*) and hold a token in clear."
+  }
+}

