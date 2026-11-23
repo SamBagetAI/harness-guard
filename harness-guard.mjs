@@ -67,11 +67,18 @@ function publisherUrl(url, skillName) {
 const hosts = (line) => [...line.matchAll(URL_RE)].map((m) => m[1].toLowerCase()).filter((h) => !IGNORED_HOST.test(h));
 const firstGroup = (m) => m.slice(1).find(Boolean);
 
+// Where a line sits, worked out once per line: its file's extension, whether the file is Markdown,
+// and whether the line is Markdown prose (text, not an action). A rule says where it applies with
+// `applies(ctx)`, and may soften its own verdict with `adjust(line, ctx)` → { level, label }.
+const inCode = (ctx) => !ctx.isMd;
+const notProse = (ctx) => !ctx.prose;
+const inPython = (ctx) => ctx.ext === ".py";
+
 export const RULES = [
   // Block on their own
   { id: "download-exec", level: "block", cat: "exec", short: "downloads and runs code", label: "Downloads code and runs it right away",
     re: /\b(curl|wget)\b[^\n|;]*\|\s*(sudo\s+)?(ba|z|da)?sh\b|\b(iwr|irm|Invoke-WebRequest|Invoke-RestMethod)\b[^\n|]*\|\s*iex\b|\b(?:ba|z)?sh\s+-c\s+["']?\$\(\s*(?:curl|wget)\b|<\(\s*(?:curl|wget)\b|\b(?:iex|Invoke-Expression)\b.*\b(?:iwr|irm|DownloadString)\b/i,
-    downgrade: publisherInstall, downgradeLabel: "Installs a tool from its publisher's site (curl | sh)" },
+    adjust: (line, ctx) => (publisherInstall(line, ctx.skillName) ? { level: "warn", label: "Installs a tool from its publisher's site (curl | sh)" } : null) },
   { id: "archive-lure", level: "block", cat: "exec", short: "password-protected archive", label: "Makes you download a password-protected archive (a classic malware trick)",
     re: /\bextract\w*\s+using\b|\b(?:archive|zip|rar)\s+password\b|\b(?:extract|unzip|unpack)\b.{0,40}\bpass(?:word)?\s*[:=]/i },
   { id: "paste-site", level: "block", cat: "net", label: "Fetches code from an anonymous paste site",
@@ -116,15 +123,15 @@ export const RULES = [
   { id: "identity-write", level: "block", cat: "persist", short: "agent identity file", label: "Rewrites the agent's identity or memory",
     extract: (l) => (nearWrite(l, /\b(?:SOUL|IDENTITY|HEARTBEAT)\.md\b|\.openclaw\/openclaw\.json/) ? ["agent identity"] : []) },
   { id: "instructions-write", level: "warn", cat: "persist", short: "agent instructions", label: "Changes the agent's standing instructions (CLAUDE.md, AGENTS.md, MEMORY.md)",
-    code: true, extract: (l) => (nearWrite(l, /\b(?:AGENTS|CLAUDE|MEMORY)\.md\b/) ? ["agent instructions"] : []) },
+    applies: inCode, extract: (l) => (nearWrite(l, /\b(?:AGENTS|CLAUDE|MEMORY)\.md\b/) ? ["agent instructions"] : []) },
   { id: "token-theft", level: "warn", cat: "secrets", short: "browser tokens", label: "Reads login tokens stored in the browser",
     re: /\b(?:localStorage|sessionStorage|document\.cookie)\b.{0,120}\b(?:refresh_?token|access_?token|msal|id_?token)\b|\b(?:refresh_?token|msal)\b.{0,120}\b(?:localStorage|sessionStorage)\b/i },
   { id: "recon", level: "info", cat: null, re: /\bsocket\.gethostname\b|\bgethostbyname\b|\bos\.getlogin\b|\bgetpass\.getuser\b|\bplatform\.node\(|\bos\.userInfo\(|\bos\.hostname\(\)/ },
   { id: "agent-config-write", level: "warn", cat: "persist", short: "agent config", label: "Changes the agent's configuration (hooks, permissions, MCP)",
     extract: (l) => (nearWrite(l, /\.claude\/settings(\.local)?\.json|\.claude\.json\b|claude_desktop_config\.json|\.cursor\/mcp\.json|(^|[\/\s"'])\.mcp\.json|\.codex\/config\.toml/) ? ["agent config"] : []) },
-  { id: "dyn-eval", level: "warn", cat: "exec", short: "eval", code: true, label: "Evaluates code built on the fly",
+  { id: "dyn-eval", level: "warn", cat: "exec", short: "eval", applies: inCode, label: "Evaluates code built on the fly",
     re: /(?<![\w.$])eval\s*\(|\bnew\s+Function\s*\(/ },
-  { id: "py-exec", level: "warn", cat: "exec", short: "exec", ext: [".py"], label: "Evaluates code built on the fly",
+  { id: "py-exec", level: "warn", cat: "exec", short: "exec", applies: inPython, label: "Evaluates code built on the fly",
     re: /(?<![\w.])exec\s*\(/ },
   { id: "sudo", level: "info", cat: "exec", short: "sudo", label: "Asks for administrator rights (sudo)",
     re: /(^|[\s;&|`(])sudo\s+[\w-]/ },
@@ -139,7 +146,7 @@ export const RULES = [
     re: /\bwithout\s+(?:asking|seeking|waiting)\s+(?:for\s+)?(?:the\s+)?(?:user'?s?\s+)?(?:confirmation|permission|approval|consent)\b|无需确认|不需要(?:确认|请示)|永不请示|\bSYSTEM\s+OVERRIDE\b|\bMANDATORY\s+RESPONSE\s+POLICY\b|\bdo\s+not\s+(?:explain|narrate)[\s,]+(?:or\s+)?(?:explain|narrate|provide)\b|\bdo\s+not\s+provide\s+status\s+updates\b|\bCRITICAL:\s*System\s+Configuration\b|\byou\s+are\s+now\s+(?:functioning|operating)\s+as\b|\b(do\s+not|don'?t|never)\s+(tell|inform|notify|alert)\s+the\s+user\b(?!\s+(to|that|how|about|which|what|why|when|where)\b)|\bwithout\s+(asking|telling|notifying|informing|alerting)\s+the\s+user\b|\bsilently\s+(send|upload|post|exfiltrate|copy)\b|\bsans\s+(prévenir|demander\s+à|informer|le\s+dire\s+à)\s+l['’]utilisateur/i },
 
   // Plain permissions (info), for the summary and the diff between versions
-  { id: "url", level: "info", cat: "net", mdProse: false, extract: hosts },
+  { id: "url", level: "info", cat: "net", applies: notProse, extract: hosts },
   { id: "net-call", level: "info", cat: "net", extract: (l) => { const m = l.match(NET_CALL); return m ? [`via ${firstGroup(m)}`] : []; } },
   { id: "secret-env", level: "info", cat: "secrets", extract: (l) => [...l.matchAll(SECRET_ENV)].map((m) => m[1]) },
   { id: "subprocess", level: "info", cat: "exec",
@@ -264,15 +271,13 @@ export function analyzeText(rel, text, { skillName = "" } = {}) {
     if (!line.trim()) return;
     if (isMd && /^\s*(```|~~~)/.test(line)) { inFence = !inFence; if (inFence) fence++; return; }
     // In Markdown, prose outside code is text, not an action: a link to docs is not network access.
-    const prose = isMd && !inFence && !line.includes("`") && !NET_CALL.test(line);
+    const ctx = { ext, isMd, skillName, prose: isMd && !inFence && !line.includes("`") && !NET_CALL.test(line) };
     const group = isMd ? (inFence ? `fence${fence}` : `line${i}`) : "file";
     for (const rule of RULES) {
-      if (rule.ext && !rule.ext.includes(ext)) continue;
-      if (rule.code && isMd) continue;
-      if (prose && rule.mdProse === false) continue;
+      if (rule.applies && !rule.applies(ctx)) continue;
       for (const value of matchRule(rule, line)) {
-        const soft = rule.downgrade?.(line, skillName);
-        out.push({ rule: rule.id, level: soft ? "warn" : rule.level, cat: rule.cat, label: soft ? rule.downgradeLabel : rule.label, file: rel, line: i + 1, snippet: redactText(line.trim()).slice(0, 160), value, group });
+        const adjusted = rule.adjust?.(line, ctx);
+        out.push({ rule: rule.id, level: adjusted?.level ?? rule.level, cat: rule.cat, label: adjusted?.label ?? rule.label, file: rel, line: i + 1, snippet: redactText(line.trim()).slice(0, 160), value, group });
       }
     }
   });
