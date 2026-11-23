@@ -146,14 +146,29 @@ export const RULES = [
     extract: (l) => [...l.matchAll(/\b(child_process|execSync|spawnSync|execFileSync|subprocess\.(?:run|Popen|call|check_call|check_output)|os\.system|os\.popen)\b/g)].map((m) => m[1]) },
 ];
 
-const COMBO_LABEL = {
-  "secret-exfil": "Reads credentials from the machine and contacts the Internet in the same place",
-  "env-exfil": "Reads all environment variables and contacts the Internet in the same place",
-  "token-exfil": "Reads a secret and contacts a suspicious address (raw IP or collection service)",
-  "recon-send": "Collects details about the machine (name, user) and sends them over the Internet",
-  "mining-persist": "Mines cryptocurrency and installs itself to keep running (service, launch agent or cron)",
-  "secret-exfil-cross": "Reads credentials from the machine, and the skill contacts a suspicious address",
-};
+// Dangerous combinations, all in one table. "group" ones look at one place (a code file, or one
+// Markdown code block), "skill" ones at the whole skill. Each needs its anchor finding (`at`), what
+// else must be there (`with`), and nothing from `unless`; the finding lands at the anchor's place.
+const any = (...ids) => (fs) => fs.some((f) => ids.includes(f.rule));
+const netInScope = (fs) => fs.some((f) => f.cat === "net");
+export const COMBOS = [
+  { id: "secret-exfil", scope: "group", at: "secret-file", with: netInScope, level: "block", label: "Reads credentials from the machine and contacts the Internet in the same place" },
+  { id: "env-exfil", scope: "group", at: "env-dump", with: netInScope, level: "block", label: "Reads all environment variables and contacts the Internet in the same place" },
+  { id: "token-exfil", scope: "group", at: "secret-env", with: any("exfil-host", "raw-ip"), level: "block", label: "Reads a secret and contacts a suspicious address (raw IP or collection service)" },
+  { id: "recon-send", scope: "group", at: "recon", with: any("net-call"), codeOnly: true, level: "warn", label: "Collects details about the machine (name, user) and sends them over the Internet" },
+  { id: "secret-exfil-cross", scope: "skill", at: "secret-file", with: any("exfil-host", "raw-ip"), unless: any("secret-exfil", "token-exfil"), level: "block", label: "Reads credentials from the machine, and the skill contacts a suspicious address" },
+  { id: "mining-persist", scope: "skill", at: "mining", with: any("launch-agent", "cron", "shell-rc-write"), level: "block", label: "Mines cryptocurrency and installs itself to keep running (service, launch agent or cron)" },
+];
+
+// Adds the combinations of one scope found among `fs`, to `out`.
+function applyCombos(out, scope, fs, { isMd = false } = {}) {
+  for (const c of COMBOS) {
+    if (c.scope !== scope || (c.codeOnly && isMd)) continue;
+    const at = fs.find((f) => f.rule === c.at);
+    if (at && c.with(fs) && !c.unless?.(fs)) out.push({ ...at, rule: c.id, level: c.level, cat: null, label: c.label, value: undefined });
+  }
+}
+
 
 // ── Reading the skill ─────────────────────────────────────────────────────
 
@@ -238,8 +253,6 @@ function matchRule(rule, line) {
   return [rule.short ?? m[0]];
 }
 
-// Pushes a combination finding, at the place of the finding that triggered it.
-const combo = (out, id, at, level = "block") => out.push({ ...at, rule: id, level, cat: null, label: COMBO_LABEL[id], value: undefined });
 
 // ctx.skillName: the skill being read, so its publisher's own install script can be told apart.
 export function analyzeText(rel, text, { skillName = "" } = {}) {
@@ -273,14 +286,7 @@ export function analyzeText(rel, text, { skillName = "" } = {}) {
   }
 
   // Dangerous combinations: a secret and a network call in the same place (same code file, or same Markdown code block).
-  for (const fs of groupBy(out, (f) => f.group).values()) {
-    const has = (id) => fs.find((f) => f.rule === id);
-    const net = fs.find((f) => f.cat === "net");
-    if (has("secret-file") && net) combo(out, "secret-exfil", has("secret-file"));
-    if (has("env-dump") && net) combo(out, "env-exfil", has("env-dump"));
-    if (has("secret-env") && (has("exfil-host") || has("raw-ip"))) combo(out, "token-exfil", has("secret-env"));
-    if (!isMd && has("recon") && has("net-call")) combo(out, "recon-send", has("recon"), "warn");
-  }
+  for (const fs of groupBy(out, (f) => f.group).values()) applyCombos(out, "group", fs, { isMd });
   return out;
 }
 
@@ -306,15 +312,7 @@ export function scan(target, { record, skill: preread } = {}) {
     if (f.text != null) raw.push(...analyzeText(f.rel, f.text, { skillName: skill.name }));
     else raw.push({ rule: "unreadable", level: "warn", cat: null, label: f.problem, file: f.rel, line: 0, snippet: "" });
   }
-  const secretFile = raw.find((f) => f.rule === "secret-file");
-  const suspect = raw.find((f) => f.rule === "exfil-host" || f.rule === "raw-ip");
-  if (secretFile && suspect && !raw.some((f) => f.rule === "secret-exfil" || f.rule === "token-exfil")) {
-    combo(raw, "secret-exfil-cross", secretFile);
-  }
-  const mining = raw.find((f) => f.rule === "mining");
-  if (mining && raw.some((f) => ["launch-agent", "cron", "shell-rc-write"].includes(f.rule))) {
-    combo(raw, "mining-persist", mining);
-  }
+  applyCombos(raw, "skill", [...raw]);
 
   const permissions = summarize(raw);
   const seen = new Set();
