@@ -5,7 +5,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { check } from "../harness-guard.mjs";
+import { check, warmScans } from "../harness-guard.mjs";
 
 const args = process.argv.slice(2);
 const corpus = resolve(args.find((a) => !a.startsWith("--")) ?? ".");
@@ -14,6 +14,7 @@ const out = args.includes("--out") ? args[args.indexOf("--out") + 1] : null;
 if (!useJudge) process.env.HARNESS_GUARD_JUDGE = "off";
 
 const manifest = JSON.parse(readFileSync(join(corpus, "manifest.json"), "utf8"));
+await warmScans(manifest.map((s) => join(corpus, s.label, s.id)));
 const rows = new Array(manifest.length);
 let next = 0, done = 0;
 await Promise.all(Array.from({ length: useJudge ? 4 : 8 }, async () => {

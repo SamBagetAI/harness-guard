@@ -7,7 +7,7 @@ import { RANK, VERDICT_TEXT, ICON, worst, live, list, groupBy, userHome, tilde, 
 import { join, dirname, basename, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { analyzeText, summarize, findSkills, check, judgeFailed, PERM_CATS } from "./harness-guard.mjs";
+import { analyzeText, summarize, findSkills, check, judgeFailed, warmScans, PERM_CATS } from "./harness-guard.mjs";
 import { judge, applyJudgement } from "./judge.mjs";
 
 export { redactText, hasSecret } from "./common.mjs";
@@ -385,6 +385,7 @@ export async function scanHarness({ cwd = process.cwd(), home = userHome(), judg
   const skills = withSkills ? allSkills : [];
 
   // Skills keep their own analysis (and their own approvals).
+  await warmScans(skills.map(({ dir }) => dir));
   await mapLimit(skills, 4, async ({ dir, origin }) => {
     const r = await check(dir, { judge: judgeMode !== "off", cacheOnly: judgeMode !== "full" });
     pieces.push({ id: `skill:${tilde(dir, home)}`, kind: "skill", name: r.name, source: tilde(dir, home), hash: r.hash, findings: r.findings, permissions: r.permissions, judge: r.judge, judgeError: r.judgeError, origin, detail: tilde(dir, home) });

@@ -10,6 +10,8 @@ import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 import { spawn, spawnSync } from "node:child_process";
+import { Worker, isMainThread } from "node:worker_threads";
+import { availableParallelism } from "node:os";
 import { text as streamText } from "node:stream/consumers";
 import { judge, applyJudgement, judgeBackend } from "./judge.mjs";
 import { RANK, VERDICT_TEXT, ICON, worst, live, list, groupBy, tilde, stateDir, readJsonOrNull, frontmatterField, redactText, mapLimit } from "./common.mjs";
@@ -361,6 +363,21 @@ function analysisOf(target) {
   return analysis;
 }
 
+// Fills the analysis cache for many skills at once, on several threads. The regexes are CPU work,
+// so a cold cache (first run, after an update) is filled up to four times faster; afterwards every
+// check reads the cache. HARNESS_GUARD_WORKERS=0 turns it off.
+export async function warmScans(dirs) {
+  const cold = dirs.filter((dir) => { try { return readJsonOrNull(cacheFile(listSkill(dir).root))?.print !== fingerprint(listSkill(dir)); } catch { return false; } });
+  const n = Math.min(4, Math.max(1, availableParallelism() - 1), Math.floor(cold.length / 2));
+  if (n < 2 || process.env.HARNESS_GUARD_WORKERS === "0") return;
+  const shares = Array.from({ length: n }, (_, i) => cold.filter((_, k) => k % n === i));
+  await Promise.all(shares.map((share) => new Promise((done) => {
+    const worker = new Worker(new URL("./scan-worker.mjs", import.meta.url), { workerData: { dirs: share } });
+    worker.on("exit", done);
+    worker.on("error", done);
+  })));
+}
+
 export function scan(target, { record, skill: preread } = {}) {
   const a = preread ? analyseSkill(preread) : analysisOf(target);
   const skill = { name: a.name, root: a.root, hash: a.hash };
@@ -597,6 +614,7 @@ async function postWrite(input) {
   } else if (input.tool_name === "Bash" && isInstallCommand(ti.command)) {
     // After an install command: static analysis of the active skills, and only blocks are reported.
     const dirs = activeSkillDirs({ cwd: input.cwd }).map(({ dir }) => dir);
+    await warmScans(dirs);
     reports = (await mapLimit(dirs, 4, (d) => check(d, { cacheOnly: true }))).filter((r) => r.verdict === "block");
   }
   if (!reports.length) return null;
@@ -926,7 +944,9 @@ export async function main(argv) {
       return exit(h.verdict);
     }
     if (cmd === "audit") {
-      const reports = byVerdict(await mapLimit(auditDirs(rest, cwdArg), 4, (d) => check(d, { judge: judgeMode !== "off", cacheOnly: judgeMode !== "full" })));
+      const dirs = auditDirs(rest, cwdArg);
+      await warmScans(dirs);
+      const reports = byVerdict(await mapLimit(dirs, 4, (d) => check(d, { judge: judgeMode !== "off", cacheOnly: judgeMode !== "full" })));
       if (json) { console.log(JSON.stringify(reports, null, 2)); }
       else {
         if (!reports.length) console.log("No skills found.");
@@ -951,5 +971,6 @@ export async function main(argv) {
   }
 }
 
-const isMain = (() => { try { return realpathSync(process.argv[1]) === realpathSync(SELF); } catch { return false; } })();
+// A worker inherits process.argv, so it must not take itself for the command line.
+const isMain = isMainThread && (() => { try { return realpathSync(process.argv[1]) === realpathSync(SELF); } catch { return false; } })();
 if (isMain) process.exitCode = await main(process.argv.slice(2));

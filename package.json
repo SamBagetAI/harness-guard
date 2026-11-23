@@ -8,8 +8,10 @@
   },
   "files": [
     "harness-guard.mjs",
+    "harness.mjs",
     "judge.mjs",
-    "harness.mjs"
+    "common.mjs",
+    "scan-worker.mjs"
   ],
   "scripts": {
     "test": "node --test --test-reporter=spec tests/*.test.mjs",
