@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 210" width="240" height="210" role="img" aria-label="Harness Guard's mascot: a small guard dog in a harness, with a shield on its chest, keeping watch">
+  <title>Harness Guard dog</title>
+  <style>
+    /* The dog keeps watch: its head turns a little, its ears perk, its tail wags, it blinks,
+       and a glint runs across the shield on its harness. */
+    .head { transform-box: fill-box; transform-origin: 50% 90%; animation: watch 4s ease-in-out infinite; }
+    .ear-l { transform-box: fill-box; transform-origin: 80% 100%; animation: perk 4s ease-in-out infinite; }
+    .ear-r { transform-box: fill-box; transform-origin: 20% 100%; animation: perk 4s ease-in-out infinite reverse; }
+    .tail { transform-box: fill-box; transform-origin: 0% 100%; animation: wag 0.6s ease-in-out infinite alternate; }
+    .blink { transform-box: fill-box; transform-origin: 50% 50%; animation: blink 4s infinite; }
+    .glint { animation: glint 4s ease-in-out infinite; }
+    @keyframes watch { 0%, 100% { transform: rotate(0) } 25% { transform: rotate(-6deg) } 60% { transform: rotate(5deg) } }
+    @keyframes perk { 0%, 100% { transform: rotate(0) } 30% { transform: rotate(-8deg) } 40% { transform: rotate(4deg) } }
+    @keyframes wag { from { transform: rotate(-10deg) } to { transform: rotate(14deg) } }
+    @keyframes blink { 0%, 90%, 100% { transform: scaleY(1) } 94% { transform: scaleY(0.1) } }
+    @keyframes glint { 0%, 55% { transform: translateX(-40px); opacity: 0 } 60% { opacity: 1 } 75%, 100% { transform: translateX(40px); opacity: 0 } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important } }
+  </style>
+  <defs>
+    <clipPath id="shield"><path d="M120 128 L142 135 C142 158 134 170 120 177 C106 170 98 158 98 135 Z"/></clipPath>
+  </defs>
+
+  <!-- ground -->
+  <ellipse cx="122" cy="200" rx="78" ry="6" fill="#e9e2d3"/>
+
+  <!-- tail, behind the body -->
+  <path class="tail" d="M158 186 C178 184 190 168 192 146 C193 140 186 138 183 144 C180 160 172 172 156 174 Z" fill="#e8a25a" stroke="#1d1b18" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- body, chest and front legs -->
+  <path d="M74 198 C66 160 80 116 120 112 C160 116 174 160 166 198 Z" fill="#e8a25a" stroke="#1d1b18" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M96 196 C92 166 104 140 120 138 C136 140 148 166 144 196 Z" fill="#fbe7c6"/>
+  <path d="M98 198 V170 M142 198 V170" stroke="#1d1b18" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M86 198 C86 190 92 186 99 186 C106 186 110 190 110 198 Z M130 198 C130 190 134 186 141 186 C148 186 154 190 154 198 Z" fill="#fbe7c6" stroke="#1d1b18" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- the harness: collar, chest strap, and the shield it carries -->
+  <path d="M92 126 C104 134 136 134 148 126" fill="none" stroke="#1a3ad8" stroke-width="9" stroke-linecap="round"/>
+  <path d="M78 166 C96 174 144 174 162 166" fill="none" stroke="#1a3ad8" stroke-width="9" stroke-linecap="round"/>
+  <path d="M120 128 L142 135 C142 158 134 170 120 177 C106 170 98 158 98 135 Z" fill="#1a3ad8" stroke="#1d1b18" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M110 151 L117 158 L131 143" fill="none" stroke="#fffdf8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g clip-path="url(#shield)"><path class="glint" d="M112 126 L122 126 L110 180 L100 180 Z" fill="#fffdf8" opacity=".5"/></g>
+
+  <!-- head: ears, face, muzzle -->
+  <g class="head">
+    <path class="ear-l" d="M90 66 C80 50 78 32 82 20 C94 26 106 38 110 52 Z" fill="#c9803c" stroke="#1d1b18" stroke-width="3" stroke-linejoin="round"/>
+    <path class="ear-l" d="M93 58 C88 46 87 36 88 30 C96 35 102 42 104 50 Z" fill="#f6c6c9"/>
+    <path class="ear-r" d="M150 66 C160 50 162 32 158 20 C146 26 134 38 130 52 Z" fill="#c9803c" stroke="#1d1b18" stroke-width="3" stroke-linejoin="round"/>
+    <path class="ear-r" d="M147 58 C152 46 153 36 152 30 C144 35 138 42 136 50 Z" fill="#f6c6c9"/>
+    <path d="M120 40 C146 40 160 58 160 80 C160 104 142 120 120 120 C98 120 80 104 80 80 C80 58 94 40 120 40 Z" fill="#e8a25a" stroke="#1d1b18" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M120 84 C134 84 144 92 144 102 C144 112 134 118 120 118 C106 118 96 112 96 102 C96 92 106 84 120 84 Z" fill="#fbe7c6"/>
+    <path d="M100 66 C104 62 110 62 113 65 M127 65 C130 62 136 62 140 66" fill="none" stroke="#1d1b18" stroke-width="2.5" stroke-linecap="round"/>
+    <g class="blink"><circle cx="107" cy="76" r="5" fill="#1d1b18"/><circle cx="109" cy="74" r="1.6" fill="#fffdf8"/></g>
+    <g class="blink"><circle cx="133" cy="76" r="5" fill="#1d1b18"/><circle cx="135" cy="74" r="1.6" fill="#fffdf8"/></g>
+    <path d="M113 92 C113 88 127 88 127 92 C127 96 122 99 120 99 C118 99 113 96 113 92 Z" fill="#1d1b18"/>
+    <path d="M120 99 V104 M111 104 C114 109 118 108 120 104 C122 108 126 109 129 104" fill="none" stroke="#1d1b18" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <ellipse cx="96" cy="94" rx="5" ry="3" fill="#ef9f8a" opacity=".7"/>
+    <ellipse cx="144" cy="94" rx="5" ry="3" fill="#ef9f8a" opacity=".7"/>
+  </g>
+</svg>
