@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/guard.svg" width="200" alt="Harness Guard's dog, in a harness with a shield on its chest, keeping watch"></p>
+<p align="center"><img src="docs/guard.svg" width="200" alt="Harness Guard's German shepherd, in a harness with a shield on its chest, keeping watch"></p>
 
 <h1 align="center">Harness Guard</h1>
 
