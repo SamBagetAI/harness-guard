@@ -17,7 +17,8 @@
     "test": "node --test --test-reporter=spec tests/*.test.mjs",
     "examples": "node examples/check.mjs",
     "bench": "node bench/run.mjs",
-    "graph": "graphify update ."
+    "graph": "graphify update .",
+    "record": "node scripts/record.mjs"
   },
   "engines": {
     "node": ">=18"
@@ -26,5 +27,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/SamBagetAI/harness-guard"
+  },
+  "devDependencies": {
+    "gifenc": "^1.0.3",
+    "playwright-core": "^1.65.1",
+    "pngjs": "^7.0.0"
   }
 }

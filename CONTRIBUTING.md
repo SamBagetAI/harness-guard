@@ -43,6 +43,7 @@ agents to use it when it is there.
 | `npm test` | nothing | yes |
 | `node bench/run.mjs <corpus>` | a labelled corpus | no: run it locally |
 | `node bench/run.mjs <corpus> --judge` | a corpus and the AI judge | no: it costs model calls |
+| `npm run record` | `npm install` and Google Chrome | no: re-records the README's GIF and social card from the examples |
 
 A change comes with tests (the Tests section of [docs/how-it-works.md](docs/how-it-works.md) says
 which file), and with that page brought up to date. A new rule also comes with an example in
